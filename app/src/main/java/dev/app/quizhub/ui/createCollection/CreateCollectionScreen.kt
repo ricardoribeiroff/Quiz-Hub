@@ -1,41 +1,29 @@
 package dev.app.quizhub.ui.createCollection
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import android.app.Application
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material3.BottomAppBar
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import dev.app.quizhub.data.CollectionDAO
-import dev.app.quizhub.ui.home.HomeViewModel
 import dev.app.quizhub.ui.theme.QuizhubTheme
 
 @Composable
 fun CreateCollection(
     navController: NavController,
-    homeViewModel: HomeViewModel = viewModel(),
-    createCollectionViewModel: CreateCollectionViewModel = viewModel()
+    createCollectionViewModel: CreateCollectionViewModel = viewModel(
+        factory = CreateCollectionViewModelFactory(LocalContext.current.applicationContext as Application)
+    )
 ) {
     val state = createCollectionViewModel.state
-    val dao = CollectionDAO(context = navController.context)
-    QuizhubTheme() {
+    QuizhubTheme {
         Scaffold(
             topBar = {
                 Box(
@@ -62,7 +50,7 @@ fun CreateCollection(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                     actions = {
-                        IconButton(onClick = {}) {
+                        IconButton(onClick = {navController.navigate("HomeScreen")}) {
                             Icon(Icons.Filled.Home, contentDescription = "Home")
                         }
                     },
@@ -75,36 +63,54 @@ fun CreateCollection(
                             },
                             elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
                         ) {
-                            Icon(Icons.Filled.Add, "Localized description")
+                            Icon(Icons.Filled.Add, contentDescription = "Save Collection")
                         }
                     }
-                ) }
+                )
+            }
         ) { innerPadding ->
-            Column(modifier = Modifier
-                .padding(innerPadding)
-                .padding(horizontal = 20.dp)) {
+            Column(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .padding(horizontal = 20.dp)
+            ) {
                 Text(
                     text = "Nome da Coleção",
-                    style = MaterialTheme.typography.titleLarge)
+                    style = MaterialTheme.typography.titleLarge
+                )
                 TextField(
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.onPrimary,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.onPrimary,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     value = state.name,
-                    onValueChange = {createCollectionViewModel.onNameChange(it)},
+                    onValueChange = { createCollectionViewModel.onNameChange(it) }
+                )
+                Text(
+                    text = "Criador",
+                    style = MaterialTheme.typography.titleLarge
+                )
+                TextField(
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.onPrimary,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    value = state.owner,
+                    onValueChange = { createCollectionViewModel.onOwnerChange(it) }
                 )
                 Text(
                     text = "Descrição",
-                    style = MaterialTheme.typography.titleLarge)
+                    style = MaterialTheme.typography.titleLarge
+                )
                 TextField(
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.onPrimary,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.onPrimary,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     value = state.description,
-                    onValueChange = {createCollectionViewModel.onDescriptionChange(it)},
+                    onValueChange = { createCollectionViewModel.onDescriptionChange(it) }
                 )
+
             }
         }
     }

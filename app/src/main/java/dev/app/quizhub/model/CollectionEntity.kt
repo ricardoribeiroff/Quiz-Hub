@@ -1,9 +1,11 @@
 package dev.app.quizhub.model
 
+import com.google.firebase.Timestamp
+
 data class CollectionEntity(
-    val id: Long = 0,
     val name: String = "",
     val description: String = "",
-    val createdAt: String = "",
-    val updatedAt: String = ""
+    val owner: String = "",
+    val createdAt: Timestamp? = null,
+    val updatedAt: Timestamp? = null
 )
