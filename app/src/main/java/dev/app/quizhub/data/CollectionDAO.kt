@@ -1,118 +1,38 @@
 package dev.app.quizhub.data
 
-import android.content.ContentValues
-import android.content.Context
+import android.util.Log
+import android.widget.Toast
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
 import dev.app.quizhub.model.CollectionEntity
+import kotlinx.coroutines.tasks.await
 
+class CollectionDAO {
 
-class CollectionDAO(private val context: Context) {
+    private val db = FirebaseFirestore.getInstance()
+    private val collectionRef = db.collection("collections")
 
-    private val dbHelper: DatabaseHelper by lazy {
-        DatabaseHelper(context)
-    }
-
-    fun insert(collection: CollectionEntity): Long {
-        val db = dbHelper.writableDatabase
-
-        val values = ContentValues().apply {
-            put(DatabaseHelper.COLUMN_NAME, collection.name)
-            put(DatabaseHelper.COLUMN_DESCRIPTION, collection.description)
+    suspend fun getAll(): List<CollectionEntity> {
+        return try {
+            val snapshot = collectionRef.get().await()
+            snapshot.toObjects(CollectionEntity::class.java)
+        } catch (e: Exception) {
+            emptyList()
         }
-
-        return db.insert(DatabaseHelper.TABLE_COLLECTIONS, null, values)
     }
 
-    fun getById(id: Long): CollectionEntity? {
-        val db = dbHelper.readableDatabase
-        val cursor = db.query(
-            DatabaseHelper.TABLE_COLLECTIONS,
-            arrayOf(
-                DatabaseHelper.COLUMN_ID,
-                DatabaseHelper.COLUMN_NAME,
-                DatabaseHelper.COLUMN_DESCRIPTION,
-                DatabaseHelper.COLUMN_CREATED_AT,
-                DatabaseHelper.COLUMN_UPDATED_AT
-            ),
-            "\${DatabaseHelper.COLUMN_ID} = ?",
-            arrayOf(id.toString()),
-            null,
-            null,
-            null
-        )
-
-        return if (cursor.moveToFirst()) {
-            val collection = CollectionEntity(
-                id = cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ID)),
-                name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_NAME)),
-                description = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_DESCRIPTION)),
-                createdAt = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_CREATED_AT)),
-                updatedAt = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_UPDATED_AT))
+    suspend fun insert(collection: CollectionEntity) {
+        try {
+            val data = mapOf(
+                "name" to collection.name,
+                "description" to collection.description,
+                "owner" to collection.owner,
+                "createdAt" to FieldValue.serverTimestamp(),
+                "updatedAt" to FieldValue.serverTimestamp()
             )
-            cursor.close()
-            collection
-        } else {
-            cursor.close()
-            null
+            collectionRef.add(data).await()
+        } catch (e: Exception) {
+            Log.d("CollectionDAO", "Error inserting collection", e)
         }
-    }
-
-    fun getAll(): List<CollectionEntity> {
-        val collections = mutableListOf<CollectionEntity>()
-        val db = dbHelper.readableDatabase
-        val cursor = db.query(
-            DatabaseHelper.TABLE_COLLECTIONS,
-            arrayOf(
-                DatabaseHelper.COLUMN_ID,
-                DatabaseHelper.COLUMN_NAME,
-                DatabaseHelper.COLUMN_DESCRIPTION,
-                DatabaseHelper.COLUMN_CREATED_AT,
-                DatabaseHelper.COLUMN_UPDATED_AT
-            ),
-            null,
-            null,
-            null,
-            null,
-            "${DatabaseHelper.COLUMN_NAME} ASC"
-        )
-
-        while (cursor.moveToNext()) {
-            collections.add(
-                CollectionEntity(
-                    id = cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ID)),
-                    name = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_NAME)),
-                    description = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_DESCRIPTION)),
-                    createdAt = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_CREATED_AT)),
-                    updatedAt = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_UPDATED_AT))
-                )
-            )
-        }
-
-        cursor.close()
-        return collections
-    }
-
-    fun update(collection: CollectionEntity): Int {
-        val db = dbHelper.writableDatabase
-
-        val values = ContentValues().apply {
-            put(DatabaseHelper.COLUMN_NAME, collection.name)
-            put(DatabaseHelper.COLUMN_DESCRIPTION, collection.description)
-        }
-
-        return db.update(
-            DatabaseHelper.TABLE_COLLECTIONS,
-            values,
-            "\${DatabaseHelper.COLUMN_ID} = ?",
-            arrayOf(collection.id.toString())
-        )
-    }
-
-    fun delete(id: Long): Int {
-        val db = dbHelper.writableDatabase
-        return db.delete(
-            DatabaseHelper.TABLE_COLLECTIONS,
-            "\${DatabaseHelper.COLUMN_ID} = ?",
-            arrayOf(id.toString())
-        )
     }
 }
