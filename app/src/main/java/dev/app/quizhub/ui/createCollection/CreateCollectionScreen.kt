@@ -1,6 +1,5 @@
 package dev.app.quizhub.ui.createCollection
 
-import android.app.Application
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -8,7 +7,6 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -18,9 +16,7 @@ import dev.app.quizhub.ui.theme.QuizhubTheme
 @Composable
 fun CreateCollectionScreen(
     navController: NavController,
-    createCollectionViewModel: CreateCollectionViewModel = viewModel(
-        factory = CreateCollectionViewModelFactory(LocalContext.current.applicationContext as Application)
-    )
+    createCollectionViewModel: CreateCollectionViewModel = viewModel()
 ) {
     val state = createCollectionViewModel.state
     QuizhubTheme {

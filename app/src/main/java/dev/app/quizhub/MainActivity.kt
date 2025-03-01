@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.lifecycle.Observer
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -12,6 +11,7 @@ import dev.app.quizhub.navigation.Screen
 import dev.app.quizhub.ui.createCollection.CreateCollectionScreen
 import dev.app.quizhub.ui.createSections.CreateSectionsScreen
 import dev.app.quizhub.ui.home.HomeScreen
+import dev.app.quizhub.ui.sections.QuestionSetsScreen
 import dev.app.quizhub.ui.sections.SectionsScreen
 import dev.app.quizhub.ui.shared.SharedViewModel
 
@@ -36,14 +36,18 @@ class MainActivity : ComponentActivity() {
                     CreateSectionsScreen(navController, sharedViewModel)
                 }
                 composable(Screen.Sections.route) {
-                    SectionsScreen(navController, sharedViewModel.collectionId.value ?: "")
+                    SectionsScreen(navController, sharedViewModel.collectionId.value ?: "", sharedViewModel)
+                }
+                composable(Screen.QuestionSets.route) {
+                    QuestionSetsScreen(navController, sharedViewModel.sectionId.value ?: "")
                 }
             }
         }
 
-        sharedViewModel.collectionId.observe(this, Observer { id ->
-            // Atualize a variável id aqui
-            val currentCollectionId = id
-        })
+//       TESTAR SE FUNCIONA O CODIGO SEM ESSE OBSERVE PARA DELETAR
+//        sharedViewModel.collectionId.observe(this, Observer { id ->
+//            // Atualize a variável id aqui
+//            val currentCollectionId = id
+//        })
     }
 }

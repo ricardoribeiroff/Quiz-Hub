@@ -1,6 +1,5 @@
 package dev.app.quizhub.ui.createSections
 
-import android.app.Application
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -11,7 +10,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -23,9 +21,7 @@ import dev.app.quizhub.ui.theme.QuizhubTheme
 fun CreateSectionsScreen(
     navController: NavController,
     sharedViewModel: SharedViewModel,
-    createSectionsViewModel: CreateSectionsViewModel = viewModel(
-        factory = CreateSectionsViewModelFactory(LocalContext.current.applicationContext as Application)
-    )
+    createSectionsViewModel: CreateSectionsViewModel = viewModel()
 ) {
     val collectionId by sharedViewModel.collectionId.observeAsState("")
     LaunchedEffect(collectionId) {
