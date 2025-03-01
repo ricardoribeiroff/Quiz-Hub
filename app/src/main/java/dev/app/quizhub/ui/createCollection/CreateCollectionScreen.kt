@@ -18,9 +18,7 @@ import dev.app.quizhub.ui.theme.QuizhubTheme
 @Composable
 fun CreateCollectionScreen(
     navController: NavController,
-    createCollectionViewModel: CreateCollectionViewModel = viewModel(
-        factory = CreateCollectionViewModelFactory(LocalContext.current.applicationContext as Application)
-    )
+    createCollectionViewModel: CreateCollectionViewModel = viewModel()
 ) {
     val state = createCollectionViewModel.state
     QuizhubTheme {

@@ -23,9 +23,7 @@ import dev.app.quizhub.ui.theme.QuizhubTheme
 fun CreateSectionsScreen(
     navController: NavController,
     sharedViewModel: SharedViewModel,
-    createSectionsViewModel: CreateSectionsViewModel = viewModel(
-        factory = CreateSectionsViewModelFactory(LocalContext.current.applicationContext as Application)
-    )
+    createSectionsViewModel: CreateSectionsViewModel = viewModel()
 ) {
     val collectionId by sharedViewModel.collectionId.observeAsState("")
     LaunchedEffect(collectionId) {

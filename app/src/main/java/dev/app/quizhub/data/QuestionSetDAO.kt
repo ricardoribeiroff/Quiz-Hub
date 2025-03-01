@@ -2,7 +2,6 @@ package dev.app.quizhub.data
 
 import android.util.Log
 import dev.app.quizhub.model.QuestionSet
-import dev.app.quizhub.model.Section
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
