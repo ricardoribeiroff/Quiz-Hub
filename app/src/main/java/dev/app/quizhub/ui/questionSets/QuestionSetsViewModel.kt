@@ -1,4 +1,4 @@
-package dev.app.quizhub.ui.sections
+package dev.app.quizhub.ui.questionSets
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel

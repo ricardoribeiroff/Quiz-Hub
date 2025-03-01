@@ -1,5 +1,6 @@
 package dev.app.quizhub
 
+import LoginScreen
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -9,9 +10,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import dev.app.quizhub.navigation.Screen
 import dev.app.quizhub.ui.createCollection.CreateCollectionScreen
+import dev.app.quizhub.ui.createQuestionSet.CreateQuestionSetScreen
 import dev.app.quizhub.ui.createSections.CreateSectionsScreen
 import dev.app.quizhub.ui.home.HomeScreen
-import dev.app.quizhub.ui.sections.QuestionSetsScreen
+import dev.app.quizhub.ui.questionSets.QuestionSetsScreen
 import dev.app.quizhub.ui.sections.SectionsScreen
 import dev.app.quizhub.ui.shared.SharedViewModel
 
@@ -24,8 +26,11 @@ class MainActivity : ComponentActivity() {
             val navController = rememberNavController()
             NavHost(
                 navController = navController,
-                startDestination = Screen.Home.route
+                startDestination = Screen.Login.route
             ) {
+                composable(Screen.Login.route) {
+                    LoginScreen(navController)
+                }
                 composable(Screen.Home.route) {
                     HomeScreen(navController, sharedViewModel)
                 }
@@ -41,13 +46,11 @@ class MainActivity : ComponentActivity() {
                 composable(Screen.QuestionSets.route) {
                     QuestionSetsScreen(navController, sharedViewModel.sectionId.value ?: "")
                 }
+                composable(Screen.CreateQuestionSet.route) {
+                    CreateQuestionSetScreen(navController, sharedViewModel)
+                }
             }
         }
 
-//       TESTAR SE FUNCIONA O CODIGO SEM ESSE OBSERVE PARA DELETAR
-//        sharedViewModel.collectionId.observe(this, Observer { id ->
-//            // Atualize a variável id aqui
-//            val currentCollectionId = id
-//        })
     }
 }
