@@ -45,9 +45,10 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        sharedViewModel.collectionId.observe(this, Observer { id ->
-            // Atualize a variável id aqui
-            val currentCollectionId = id
-        })
+//       TESTAR SE FUNCIONA O CODIGO SEM ESSE OBSERVE PARA DELETAR
+//        sharedViewModel.collectionId.observe(this, Observer { id ->
+//            // Atualize a variável id aqui
+//            val currentCollectionId = id
+//        })
     }
 }
