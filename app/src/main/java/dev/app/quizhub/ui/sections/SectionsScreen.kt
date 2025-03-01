@@ -1,6 +1,7 @@
-package dev.app.quizhub.ui.home
+package dev.app.quizhub.ui.sections
 
 import android.util.Log
+import androidx.activity.viewModels
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -17,22 +18,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import dev.app.quizhub.ui.shared.SharedViewModel
 import dev.app.quizhub.ui.theme.QuizhubTheme
 import kotlinx.coroutines.launch
 
 @Composable
-fun HomeScreen(
+fun SectionsScreen(
     navController: NavController,
-    sharedViewModel: SharedViewModel,
-    homeViewModel: HomeViewModel = viewModel()
+    collectionId: String,
+    sectionsViewModel: SectionsViewModel = viewModel()
 ) {
-    val collections = homeViewModel.collections.collectAsState(initial = emptyList())
+    val collections = sectionsViewModel.sections.collectAsState(initial = emptyList())
     val coroutineScope = rememberCoroutineScope()
+
 
     LaunchedEffect(Unit) {
         coroutineScope.launch {
-            homeViewModel.fetchCollections()
+            sectionsViewModel.fetchSections(collectionId)
+            Log.d("collectionId", "ID AQUI:${collectionId}")
         }
     }
 
@@ -63,14 +65,14 @@ fun HomeScreen(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                     actions = {
-                        IconButton(onClick = {}) {
+                        IconButton(onClick = {navController.navigate("HomeScreen")}) {
                             Icon(Icons.Filled.Home, contentDescription = "Home")
                         }
                     },
                     floatingActionButton = {
                         FloatingActionButton(
                             containerColor = MaterialTheme.colorScheme.onPrimary,
-                            onClick = { navController.navigate("CreateCollectionScreen") },
+                            onClick = { navController.navigate("CreateSectionsScreen") },
                             elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
                         ) {
                             Icon(Icons.Filled.Add, "Add collection")
@@ -86,10 +88,10 @@ fun HomeScreen(
                     .offset(y = -20.dp)
             ) {
                 HorizontalDivider()
-                collections.value.forEach { collection ->
+                collections.value.forEach { sections ->
                     ListItem(
-                        headlineContent = { Text(collection.name) },
-                        supportingContent = { Text(collection.description) },
+                        headlineContent = { Text(sections.name) },
+                        supportingContent = { Text(sections.description) },
                         leadingContent = {
                             Icon(
                                 Icons.Filled.Star,
@@ -97,10 +99,8 @@ fun HomeScreen(
                                 modifier = Modifier.padding(top = 0.dp)
                             )
                         },
-                        trailingContent = { Text(collection.owner) },
+                        trailingContent = {  },
                         modifier = Modifier.clickable {
-                            sharedViewModel.setCollectionId(collection.id.toString())
-                            navController.navigate("SectionsScreen")
                         }
                     )
                     Spacer(modifier = Modifier.height(8.dp))

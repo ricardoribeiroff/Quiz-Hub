@@ -1,24 +1,17 @@
 package dev.app.quizhub.data
 
-import android.util.Log
-import android.widget.Toast
-import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.FirebaseFirestore
 import dev.app.quizhub.model.CollectionEntity
-import kotlinx.coroutines.tasks.await
+import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
+
 
 class CollectionDAO {
 
-    private val db = FirebaseFirestore.getInstance()
-    private val collectionRef = db.collection("collections")
-
+    val supabase = DatabaseHelper().supabase
     suspend fun getAll(): List<CollectionEntity> {
-        return try {
-            val snapshot = collectionRef.get().await()
-            snapshot.toObjects(CollectionEntity::class.java)
-        } catch (e: Exception) {
-            emptyList()
-        }
+        return supabase.postgrest["collections"]
+            .select()
+            .decodeList<CollectionEntity>()
     }
 
     suspend fun insert(collection: CollectionEntity) {
@@ -26,13 +19,11 @@ class CollectionDAO {
             val data = mapOf(
                 "name" to collection.name,
                 "description" to collection.description,
-                "owner" to collection.owner,
-                "createdAt" to FieldValue.serverTimestamp(),
-                "updatedAt" to FieldValue.serverTimestamp()
+                "owner" to collection.owner
             )
-            collectionRef.add(data).await()
+            supabase.from("collections").insert(data)
         } catch (e: Exception) {
-            Log.d("CollectionDAO", "Error inserting collection", e)
+            // Handle exception
         }
     }
 }
