@@ -7,7 +7,7 @@ import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 
 class QuestionSetDAO {
-    val supabase = DatabaseHelper().supabase
+    private val supabase = DatabaseHelper().supabase
 
     suspend fun getAll(): List<QuestionSet> {
         return supabase.postgrest["question_sets"]
@@ -28,7 +28,7 @@ class QuestionSetDAO {
     suspend fun insert(questionSet: QuestionSet) {
         try {
             val data = mapOf(
-                "collection_id" to questionSet.sectionId,
+                "section_id" to questionSet.sectionId,
                 "name" to questionSet.name,
                 "description" to questionSet.description
             )

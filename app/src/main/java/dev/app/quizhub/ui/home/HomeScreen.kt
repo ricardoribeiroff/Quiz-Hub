@@ -17,8 +17,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import dev.app.quizhub.data.DatabaseHelper
 import dev.app.quizhub.ui.shared.SharedViewModel
 import dev.app.quizhub.ui.theme.QuizhubTheme
+import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.launch
 
 @Composable

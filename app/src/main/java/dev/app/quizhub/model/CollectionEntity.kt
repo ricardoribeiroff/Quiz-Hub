@@ -8,6 +8,7 @@ data class CollectionEntity(
     val name: String = "",
     val description: String = "",
     val owner: String = "",
+    var uidUser: String = "",
     val created_at: String = "",
     val updated_at: String = ""
 )
