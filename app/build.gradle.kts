@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id ("com.google.gms.google-services")
+    kotlin("plugin.serialization") version "2.1.10"
 }
 
 android {
@@ -41,10 +41,11 @@ android {
 }
 
 dependencies {
-    // Import the Firebase BoM
-    implementation(platform("com.google.firebase:firebase-bom:33.9.0"))
-    // When using the BoM, don't specify versions in Firebase dependencies
-    implementation("com.google.firebase:firebase-analytics")
+
+    implementation("io.github.jan-tennert.supabase:postgrest-kt:3.1.1")
+    implementation("io.ktor:ktor-client-android:3.1.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
+
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -57,6 +58,7 @@ dependencies {
     implementation(libs.androidx.navigation.runtime.ktx)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.firebase.firestore.ktx)
+    implementation(libs.androidx.runtime.livedata)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

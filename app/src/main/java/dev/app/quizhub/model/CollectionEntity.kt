@@ -1,11 +1,13 @@
 package dev.app.quizhub.model
 
-import com.google.firebase.Timestamp
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class CollectionEntity(
+    val id: Int = 0,
     val name: String = "",
     val description: String = "",
     val owner: String = "",
-    val createdAt: Timestamp? = null,
-    val updatedAt: Timestamp? = null
+    val created_at: String = "",
+    val updated_at: String = ""
 )

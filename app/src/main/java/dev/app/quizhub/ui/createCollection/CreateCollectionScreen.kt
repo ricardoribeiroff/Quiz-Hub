@@ -16,7 +16,7 @@ import androidx.navigation.NavController
 import dev.app.quizhub.ui.theme.QuizhubTheme
 
 @Composable
-fun CreateCollection(
+fun CreateCollectionScreen(
     navController: NavController,
     createCollectionViewModel: CreateCollectionViewModel = viewModel(
         factory = CreateCollectionViewModelFactory(LocalContext.current.applicationContext as Application)
@@ -110,7 +110,6 @@ fun CreateCollection(
                     value = state.description,
                     onValueChange = { createCollectionViewModel.onDescriptionChange(it) }
                 )
-
             }
         }
     }

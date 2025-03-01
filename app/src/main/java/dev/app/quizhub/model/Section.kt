@@ -1,11 +1,12 @@
 package dev.app.quizhub.model
 
+
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class Section(
-    val id: Long = 0,
-    val collectionId: Long,
-    val name: String,
-    val description: String? = null,
-    val orderIndex: Int = 0,
-    val createdAt: String? = null,
-    val updatedAt: String? = null
+    val id: Int = 0,
+    val collectionId: String = "",
+    val name: String = "",
+    val description: String = ""
 )
