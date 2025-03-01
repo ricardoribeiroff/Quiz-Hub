@@ -17,25 +17,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import dev.app.quizhub.ui.shared.SharedViewModel
 import dev.app.quizhub.ui.theme.QuizhubTheme
 import kotlinx.coroutines.launch
 
 @Composable
-fun SectionsScreen(
+fun QuestionSetsScreen(
     navController: NavController,
-    collectionId: String,
-    sharedViewModel: SharedViewModel,
-    sectionsViewModel: SectionsViewModel = viewModel()
+    sectionId: String,
+    questionSetsViewModel: QuestionSetsViewModel = viewModel()
 ) {
-    val collections = sectionsViewModel.sections.collectAsState(initial = emptyList())
+    val sections = questionSetsViewModel.questionSet.collectAsState(initial = emptyList())
     val coroutineScope = rememberCoroutineScope()
 
 
     LaunchedEffect(Unit) {
         coroutineScope.launch {
-            sectionsViewModel.fetchSections(collectionId)
-            Log.d("collectionId", "ID AQUI:${collectionId}")
+            questionSetsViewModel.fetchSections(sectionId)
+            Log.d("sectionId", "ID AQUI:${sectionId}")
         }
     }
 
@@ -54,7 +52,7 @@ fun SectionsScreen(
                     )
                     Text(
                         modifier = Modifier.padding(top = 140.dp),
-                        text = "Seções",
+                        text = "Question Sets",
                         style = MaterialTheme.typography.displaySmall,
                         fontSize = 20.sp,
                         color = MaterialTheme.colorScheme.primary
@@ -76,7 +74,7 @@ fun SectionsScreen(
                             onClick = { navController.navigate("CreateSectionsScreen") },
                             elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
                         ) {
-                            Icon(Icons.Filled.Add, "Add collection")
+                            Icon(Icons.Filled.Add, "Add Question Set")
                         }
                     }
                 )
@@ -89,21 +87,19 @@ fun SectionsScreen(
                     .offset(y = -20.dp)
             ) {
                 HorizontalDivider()
-                collections.value.forEach { sections ->
+                sections.value.forEach { sections ->
                     ListItem(
                         headlineContent = { Text(sections.name) },
                         supportingContent = { Text(sections.description) },
                         leadingContent = {
                             Icon(
                                 Icons.Filled.Star,
-                                contentDescription = "Section icon",
+                                contentDescription = "Question Set icon",
                                 modifier = Modifier.padding(top = 0.dp)
                             )
                         },
                         trailingContent = {  },
                         modifier = Modifier.clickable {
-                            sharedViewModel.setSection(sections.id.toString())
-                            navController.navigate("QuestionSetsScreen")
                         }
                     )
                     Spacer(modifier = Modifier.height(8.dp))

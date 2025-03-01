@@ -12,6 +12,7 @@ import dev.app.quizhub.navigation.Screen
 import dev.app.quizhub.ui.createCollection.CreateCollectionScreen
 import dev.app.quizhub.ui.createSections.CreateSectionsScreen
 import dev.app.quizhub.ui.home.HomeScreen
+import dev.app.quizhub.ui.sections.QuestionSetsScreen
 import dev.app.quizhub.ui.sections.SectionsScreen
 import dev.app.quizhub.ui.shared.SharedViewModel
 
@@ -36,7 +37,10 @@ class MainActivity : ComponentActivity() {
                     CreateSectionsScreen(navController, sharedViewModel)
                 }
                 composable(Screen.Sections.route) {
-                    SectionsScreen(navController, sharedViewModel.collectionId.value ?: "")
+                    SectionsScreen(navController, sharedViewModel.collectionId.value ?: "", sharedViewModel)
+                }
+                composable(Screen.QuestionSets.route) {
+                    QuestionSetsScreen(navController, sharedViewModel.sectionId.value ?: "")
                 }
             }
         }
