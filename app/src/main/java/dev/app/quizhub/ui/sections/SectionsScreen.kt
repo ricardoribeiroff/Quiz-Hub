@@ -28,7 +28,7 @@ fun SectionsScreen(
     sharedViewModel: SharedViewModel,
     sectionsViewModel: SectionsViewModel = viewModel()
 ) {
-    val collections = sectionsViewModel.sections.collectAsState(initial = emptyList())
+    val sections = sectionsViewModel.sections.collectAsState(initial = emptyList())
     val coroutineScope = rememberCoroutineScope()
 
 
@@ -89,7 +89,7 @@ fun SectionsScreen(
                     .offset(y = -20.dp)
             ) {
                 HorizontalDivider()
-                collections.value.forEach { sections ->
+                sections.value.forEach { sections ->
                     ListItem(
                         headlineContent = { Text(sections.name) },
                         supportingContent = { Text(sections.description) },
@@ -102,7 +102,7 @@ fun SectionsScreen(
                         },
                         trailingContent = {  },
                         modifier = Modifier.clickable {
-                            sharedViewModel.setSection(sections.id.toString())
+                            sharedViewModel.setSectionId(sections.id.toString())
                             navController.navigate("QuestionSetsScreen")
                         }
                     )

@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import dev.app.quizhub.ui.shared.SharedViewModel
 import dev.app.quizhub.ui.theme.QuizhubTheme
 import kotlinx.coroutines.launch
 
@@ -24,9 +25,10 @@ import kotlinx.coroutines.launch
 fun QuestionSetsScreen(
     navController: NavController,
     sectionId: String,
+    sharedViewModel: SharedViewModel,
     questionSetsViewModel: QuestionSetsViewModel = viewModel()
 ) {
-    val sections = questionSetsViewModel.questionSet.collectAsState(initial = emptyList())
+    val questionSets = questionSetsViewModel.questionSet.collectAsState(initial = emptyList())
     val coroutineScope = rememberCoroutineScope()
 
 
@@ -87,10 +89,10 @@ fun QuestionSetsScreen(
                     .offset(y = -20.dp)
             ) {
                 HorizontalDivider()
-                sections.value.forEach { sections ->
+                questionSets.value.forEach { questionSets ->
                     ListItem(
-                        headlineContent = { Text(sections.name) },
-                        supportingContent = { Text(sections.description) },
+                        headlineContent = { Text(questionSets.name) },
+                        supportingContent = { Text(questionSets.description) },
                         leadingContent = {
                             Icon(
                                 Icons.Filled.Star,
@@ -100,6 +102,9 @@ fun QuestionSetsScreen(
                         },
                         trailingContent = {  },
                         modifier = Modifier.clickable {
+                            sharedViewModel.setSetId(questionSets.id.toString())
+                            navController.navigate("QuestionsScreen")
+
                         }
                     )
                     Spacer(modifier = Modifier.height(8.dp))

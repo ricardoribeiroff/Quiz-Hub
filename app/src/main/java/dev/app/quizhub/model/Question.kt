@@ -1,12 +1,15 @@
 package dev.app.quizhub.model
 
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class Question(
     val id: Long = 0,
-    val setId: Long,
-    val questionText: String,
-    val explanation: String? = null,
-    val orderIndex: Int = 0,
-    val createdAt: String? = null,
-    val updatedAt: String? = null,
-    val alternatives: List<Alternative> = emptyList()
+    @SerialName("set_id")
+    val setId: Long = 0,
+    @SerialName("question_text")
+    val questionText: String = "",
+    val explanation: String = "",
+//    val alternatives: List<Alternative> = emptyList()
 )

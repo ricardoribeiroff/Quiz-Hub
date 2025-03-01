@@ -11,11 +11,17 @@ class SharedViewModel : ViewModel() {
     private val _sectionId = MutableLiveData<String>()
     val sectionId: LiveData<String> get() = _sectionId
 
+    private val _setId = MutableLiveData<String>()
+    val setId: LiveData<String> get() = _setId
+
 
     fun setCollectionId(id: String) {
         _collectionId.value = id
     }
-    fun setSection(id: String) {
+    fun setSectionId(id: String) {
         _sectionId.value = id
+    }
+    fun setSetId(id: String) {
+        _setId.value = id
     }
 }
