@@ -57,6 +57,7 @@ fun QuestionsScreen(
     val evaluationResult = questionsViewModel.evaluationResult.collectAsState(initial = emptyMap())
     val isEvaluated = questionsViewModel.isEvaluated.collectAsState(initial = false)
     val questionSet = questionsViewModel.questionSet.collectAsState(initial = null)
+    val isReadOnly = questionsViewModel.isReadOnly.collectAsState(initial = false)
     val coroutineScope = rememberCoroutineScope()
     val questionNumbers = remember {
         mutableStateOf(List(100) { it + 1 })
@@ -66,7 +67,6 @@ fun QuestionsScreen(
         coroutineScope.launch {
             questionsViewModel.fetchQuestions(setId)
             questionsViewModel.fetchAlternatives()
-            Log.d("DEBUGLOG", "ALTERNATIVES: ${alternatives.value}")
         }
     }
 
@@ -88,7 +88,6 @@ fun QuestionsScreen(
                         modifier = Modifier.padding(top = 140.dp),
                         text = questionSet.value?.name ?: "",
                         style = MaterialTheme.typography.headlineMedium,
-                        fontSize = 24.sp,
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
@@ -103,14 +102,20 @@ fun QuestionsScreen(
                         }
                     },
                     floatingActionButton = {
-                        FloatingActionButton(
-                            containerColor = MaterialTheme.colorScheme.onPrimary,
-                            onClick = {
-                                questionsViewModel.evaluateAnswers()
-                            },
-                            elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
-                        ) {
-                            Icon(Icons.Filled.Check, "Evaluate Answers")
+                        if (!isReadOnly.value) {
+                            FloatingActionButton(
+                                containerColor = MaterialTheme.colorScheme.onPrimary,
+                                onClick = {
+                                    questionsViewModel.evaluateAndNavigate { success ->
+                                        if (success) {
+                                            navController.popBackStack()
+                                        }
+                                    }
+                                },
+                                elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
+                            ) {
+                                Icon(Icons.Filled.Check, "Evaluate Answers")
+                            }
                         }
                     }
                 )
@@ -138,19 +143,21 @@ fun QuestionsScreen(
                     alternativesForQuestion.forEachIndexed { altIndex, alternative ->
                         val marker = ('a' + altIndex)
                         val isSelected = selectedAlternativeId == alternative.id
-                        val isCorrect = isEvaluated.value && isSelected && evaluationResult.value[question.id] == true
-                        val isWrong = isEvaluated.value && isSelected && evaluationResult.value[question.id] == false
+                        val isFinishedAndCorrect = alternative.isFinished && alternative.isCorrect
+                        val isFinishedAndWrong = alternative.isFinished && !alternative.isCorrect
 
                         AssistChip(
                             onClick = {
-                                questionsViewModel.toggleAlternativeSelection(question.id, alternative.id)
+                                if (!isReadOnly.value) {
+                                    questionsViewModel.toggleAlternativeSelection(question.id, alternative.id)
+                                }
                             },
                             label = { Text("$marker) ${alternative.alternativeText}") },
                             border = BorderStroke(
                                 width = -1.dp,
                                 color = when {
-                                    isCorrect -> Color(0xFFB9F6CA)
-                                    isWrong -> MaterialTheme.colorScheme.error
+                                    isFinishedAndCorrect -> Color(0xFFB9F6CA)
+                                    isFinishedAndWrong -> MaterialTheme.colorScheme.error
                                     isSelected -> MaterialTheme.colorScheme.primary
                                     else -> MaterialTheme.colorScheme.outline
                                 }
@@ -158,18 +165,31 @@ fun QuestionsScreen(
                             shape = MaterialTheme.shapes.extraSmall,
                             colors = AssistChipDefaults.assistChipColors(
                                 containerColor = when {
-                                    isCorrect -> Color(0xFFB9F6CA)
-                                    isWrong -> MaterialTheme.colorScheme.errorContainer
+                                    isFinishedAndCorrect -> Color(0xFFB9F6CA)
+                                    isFinishedAndWrong -> MaterialTheme.colorScheme.errorContainer
                                     isSelected -> MaterialTheme.colorScheme.primaryContainer
-                                    else -> AssistChipDefaults.assistChipColors().containerColor
+                                    else -> Color(0x00FFFFFF)
                                 },
                                 labelColor = when {
-                                    isCorrect -> MaterialTheme.colorScheme.onTertiaryContainer
-                                    isWrong -> MaterialTheme.colorScheme.onErrorContainer
+                                    isFinishedAndCorrect -> MaterialTheme.colorScheme.onTertiaryContainer
+                                    isFinishedAndWrong -> MaterialTheme.colorScheme.onErrorContainer
                                     isSelected -> MaterialTheme.colorScheme.onPrimaryContainer
-                                    else -> AssistChipDefaults.assistChipColors().labelColor
+                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                                disabledContainerColor = when {
+                                    isFinishedAndCorrect -> Color(0xFFB9F6CA)
+                                    isFinishedAndWrong -> MaterialTheme.colorScheme.errorContainer
+                                    isSelected -> MaterialTheme.colorScheme.primaryContainer
+                                    else -> Color(0x00FFFFFF)
+                                },
+                                disabledLabelColor = when {
+                                    isFinishedAndCorrect -> MaterialTheme.colorScheme.onTertiaryContainer
+                                    isFinishedAndWrong -> MaterialTheme.colorScheme.onErrorContainer
+                                    isSelected -> MaterialTheme.colorScheme.onPrimaryContainer
+                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
                                 }
-                            )
+                            ),
+                            enabled = !isReadOnly.value
                         )
                     }
                     HorizontalDivider()

@@ -53,9 +53,8 @@ fun QuestionSetsScreen(
                     )
                     Text(
                         modifier = Modifier.padding(top = 140.dp),
-                        text = "Question Sets",
-                        style = MaterialTheme.typography.displaySmall,
-                        fontSize = 20.sp,
+                        text = "Set de Questões",
+                        style = MaterialTheme.typography.headlineMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
                 }

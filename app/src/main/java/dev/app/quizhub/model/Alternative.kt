@@ -12,4 +12,6 @@ data class Alternative(
     val alternativeText: String = "",
     @SerialName("is_correct")
     val isCorrect: Boolean = false,
+    @SerialName("is_finished")
+    val isFinished: Boolean = false,
 )

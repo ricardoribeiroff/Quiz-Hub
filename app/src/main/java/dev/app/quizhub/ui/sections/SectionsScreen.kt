@@ -54,8 +54,7 @@ fun SectionsScreen(
                     Text(
                         modifier = Modifier.padding(top = 140.dp),
                         text = "Seções",
-                        style = MaterialTheme.typography.displaySmall,
-                        fontSize = 20.sp,
+                        style = MaterialTheme.typography.headlineMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
                 }

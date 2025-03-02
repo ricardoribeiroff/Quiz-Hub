@@ -40,4 +40,22 @@ class AlternativeDAO {
             Log.d("error", "ATENÇÃO: DEU MERDA AQUI: ${e.message}")
         }
     }
+
+    suspend fun updateIsFinished(alternativeId: Long, isFinished: Boolean) {
+        try {
+            supabase.postgrest["alternatives"]
+                .update(
+                    {
+                        set("is_finished", isFinished)
+                    }
+                ) {
+                    filter {
+                        eq("id", alternativeId)
+                    }
+                }
+            Log.d("success", "Status is_finished da alternativa atualizado com sucesso")
+        } catch (e: Exception) {
+            Log.e("error", "Erro ao atualizar is_finished da alternativa: ${e.message}")
+        }
+    }
 }

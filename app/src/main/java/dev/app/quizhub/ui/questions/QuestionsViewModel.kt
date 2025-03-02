@@ -13,8 +13,21 @@ import dev.app.quizhub.model.QuestionSet
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import android.content.Context
+import kotlinx.serialization.encodeToString
+
+@Serializable
+data class QuestionState(
+    val selectedAlternatives: Map<Long, Long>,
+    val evaluationResults: Map<Long, Boolean>,
+    val isEvaluated: Boolean
+)
 
 class QuestionsViewModel(application: Application) : AndroidViewModel(application) {
+    private val context = application.applicationContext
+    private val sharedPreferences = context.getSharedPreferences("quiz_state", Context.MODE_PRIVATE)
 
     private val _questions = MutableStateFlow<List<Question>>(emptyList())
     val question: StateFlow<List<Question>> = _questions
@@ -34,11 +47,52 @@ class QuestionsViewModel(application: Application) : AndroidViewModel(applicatio
     private val _questionSet = MutableStateFlow<QuestionSet?>(null)
     val questionSet: StateFlow<QuestionSet?> = _questionSet
 
+    private var currentSetId: String? = null
+
+    private val _isReadOnly = MutableStateFlow(false)
+    val isReadOnly: StateFlow<Boolean> = _isReadOnly
+
     fun fetchQuestions(setId: String) {
+        currentSetId = setId
         viewModelScope.launch {
             _questions.value = QuestionDAO().getBySetId(setId)
             val allQuestionSets = QuestionSetDAO().getAll()
             _questionSet.value = allQuestionSets.find { it.id.toString() == setId }
+            
+            // Carrega o estado salvo apenas se o questionário já foi avaliado
+            loadSavedState(setId)
+        }
+    }
+
+    private fun loadSavedState(setId: String) {
+        val savedStateJson = sharedPreferences.getString("quiz_state_$setId", null)
+        if (savedStateJson != null) {
+            try {
+                val savedState = Json.decodeFromString<QuestionState>(savedStateJson)
+                _selectedAlternatives.value = savedState.selectedAlternatives
+                _evaluationResult.value = savedState.evaluationResults
+                _isEvaluated.value = savedState.isEvaluated
+                // Só define como somente leitura se já foi avaliado
+                _isReadOnly.value = savedState.isEvaluated
+            } catch (e: Exception) {
+                Log.e("QuestionsViewModel", "Error loading saved state", e)
+            }
+        }
+    }
+
+    private fun saveState() {
+        currentSetId?.let { setId ->
+            val state = QuestionState(
+                selectedAlternatives = _selectedAlternatives.value,
+                evaluationResults = _evaluationResult.value,
+                isEvaluated = _isEvaluated.value
+            )
+            try {
+                val stateJson = Json.encodeToString(state)
+                sharedPreferences.edit().putString("quiz_state_$setId", stateJson).apply()
+            } catch (e: Exception) {
+                Log.e("QuestionsViewModel", "Error saving state", e)
+            }
         }
     }
 
@@ -49,6 +103,9 @@ class QuestionsViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun toggleAlternativeSelection(questionId: Long, alternativeId: Long) {
+        // Se estiver em modo somente leitura, não permite alterações
+        if (_isReadOnly.value) return
+
         val currentSelections = _selectedAlternatives.value.toMutableMap()
         if (currentSelections[questionId] == alternativeId) {
             currentSelections.remove(questionId)
@@ -56,21 +113,25 @@ class QuestionsViewModel(application: Application) : AndroidViewModel(applicatio
             currentSelections[questionId] = alternativeId
         }
         _selectedAlternatives.value = currentSelections
-        _isEvaluated.value = false // Reset evaluation when selection changes
+        _isEvaluated.value = false
+        saveState()
         Log.d("DEBUGLOG", "Question id $questionId selected alternative id: $alternativeId")
     }
 
-    fun evaluateAnswers(): Boolean {
+    suspend fun evaluateAnswers(): Boolean {
         if (_selectedAlternatives.value.size < _questions.value.size) {
             Log.d("EVALUATION", "Please answer all questions before evaluation.")
             return false
         }
 
         val results = mutableMapOf<Long, Boolean>()
+        val evaluatedAlternatives = mutableListOf<Long>()
+
         _selectedAlternatives.value.forEach { (questionId, alternativeId) ->
             val chosenAlternative = _alternatives.value.firstOrNull { it.id == alternativeId }
             if (chosenAlternative != null) {
                 results[questionId] = chosenAlternative.isCorrect
+                evaluatedAlternatives.add(alternativeId)
                 Log.d(
                     "EVALUATION",
                     "Question id $questionId: Alternative id $alternativeId isCorrect = ${chosenAlternative.isCorrect}"
@@ -82,6 +143,34 @@ class QuestionsViewModel(application: Application) : AndroidViewModel(applicatio
         }
         _evaluationResult.value = results
         _isEvaluated.value = true
-        return true
+        _isReadOnly.value = true // Define como somente leitura apenas após a avaliação
+        saveState()
+
+        try {
+            // Atualiza o status do QuestionSet
+            currentSetId?.let { setId ->
+                QuestionSetDAO().updateIsFinished(setId, true)
+            }
+
+            // Atualiza apenas as alternativas que foram efetivamente avaliadas
+            evaluatedAlternatives.forEach { alternativeId ->
+                AlternativeDAO().updateIsFinished(alternativeId, true)
+            }
+            
+            // Recarrega as alternativas para obter os estados atualizados
+            fetchAlternatives()
+            
+            return true
+        } catch (e: Exception) {
+            Log.e("EVALUATION", "Erro ao atualizar status: ${e.message}")
+            return false
+        }
+    }
+
+    fun evaluateAndNavigate(onComplete: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val result = evaluateAnswers()
+            onComplete(result)
+        }
     }
 }

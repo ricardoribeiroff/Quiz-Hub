@@ -23,10 +23,10 @@ class CreateQuestionSetViewModel(application: Application) : AndroidViewModel(ap
     fun onDescriptionChange(description: String) {
         state = state.copy(description = description)
     }
+    
     fun setSectionId(sectionId: String) {
-        state = state.copy(sectionId = sectionId)
+        state = state.copy(sectionId = sectionId.toInt())
     }
-
 
     fun saveQuestionSet() {
         viewModelScope.launch(Dispatchers.IO) {

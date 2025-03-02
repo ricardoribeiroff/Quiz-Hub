@@ -41,7 +41,7 @@ fun CreateQuestionSetScreen(
                     )
                     Text(
                         modifier = Modifier.padding(top = 140.dp),
-                        text = "Create Question Set",
+                        text = "Criar Set de Questões",
                         style = MaterialTheme.typography.displaySmall,
                         fontSize = 20.sp,
                         color = MaterialTheme.colorScheme.primary
@@ -78,7 +78,7 @@ fun CreateQuestionSetScreen(
                     .padding(horizontal = 20.dp)
             ) {
                 Text(
-                    text = "Question Set Name",
+                    text = "Nome do Set",
                     style = MaterialTheme.typography.titleLarge
                 )
                 TextField(
@@ -90,7 +90,7 @@ fun CreateQuestionSetScreen(
                     onValueChange = { createQuestionSetViewModel.onNameChange(it) }
                 )
                 Text(
-                    text = "Description",
+                    text = "Descrição",
                     style = MaterialTheme.typography.titleLarge
                 )
                 TextField(
