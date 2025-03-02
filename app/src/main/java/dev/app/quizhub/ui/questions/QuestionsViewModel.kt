@@ -59,7 +59,14 @@ class QuestionsViewModel(application: Application) : AndroidViewModel(applicatio
             val allQuestionSets = QuestionSetDAO().getAll()
             _questionSet.value = allQuestionSets.find { it.id.toString() == setId }
             
-            // Carrega o estado salvo apenas se o questionário já foi avaliado
+            // Verifica se o questionário já foi finalizado
+            _questionSet.value?.let { set ->
+                if (set.isFinished) {
+                    _isReadOnly.value = true
+                    _isEvaluated.value = true
+                }
+            }
+            
             loadSavedState(setId)
         }
     }
@@ -72,8 +79,9 @@ class QuestionsViewModel(application: Application) : AndroidViewModel(applicatio
                 _selectedAlternatives.value = savedState.selectedAlternatives
                 _evaluationResult.value = savedState.evaluationResults
                 _isEvaluated.value = savedState.isEvaluated
-                // Só define como somente leitura se já foi avaliado
-                _isReadOnly.value = savedState.isEvaluated
+                if (savedState.isEvaluated) {
+                    _isReadOnly.value = true
+                }
             } catch (e: Exception) {
                 Log.e("QuestionsViewModel", "Error loading saved state", e)
             }
@@ -99,6 +107,12 @@ class QuestionsViewModel(application: Application) : AndroidViewModel(applicatio
     fun fetchAlternatives() {
         viewModelScope.launch {
             _alternatives.value = AlternativeDAO().getAll()
+            
+            // Se houver alternativas finalizadas, marca como somente leitura
+            if (_alternatives.value.any { it.isFinished }) {
+                _isReadOnly.value = true
+                _isEvaluated.value = true
+            }
         }
     }
 
@@ -143,7 +157,7 @@ class QuestionsViewModel(application: Application) : AndroidViewModel(applicatio
         }
         _evaluationResult.value = results
         _isEvaluated.value = true
-        _isReadOnly.value = true // Define como somente leitura apenas após a avaliação
+        _isReadOnly.value = true
         saveState()
 
         try {

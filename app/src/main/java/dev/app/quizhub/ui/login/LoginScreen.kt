@@ -1,4 +1,5 @@
 import android.util.Log
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -23,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import dev.app.quizhub.R
 import dev.app.quizhub.ui.login.LoginViewModel
 import dev.app.quizhub.ui.theme.QuizhubTheme
 import kotlinx.coroutines.launch
@@ -128,3 +130,4 @@ fun LoginScreen(
 
 
 }
+
