@@ -46,6 +46,9 @@ dependencies {
     implementation("io.ktor:ktor-client-android:3.1.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
 
+    implementation("com.composables:icons-lucide:1.0.0")
+
+
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

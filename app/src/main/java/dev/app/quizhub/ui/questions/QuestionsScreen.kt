@@ -193,6 +193,7 @@ fun QuestionsScreen(
                         )
                     }
                     HorizontalDivider()
+                    Text("LOREM IPSUM DOLOR SIT AMET")
                     Spacer(modifier = Modifier.padding(8.dp))
                 }
             }
