@@ -193,7 +193,14 @@ fun QuestionsScreen(
                         )
                     }
                     HorizontalDivider()
-                    Text("LOREM IPSUM DOLOR SIT AMET")
+                    if (isEvaluated.value) {
+                        Text(
+                            text = question.explanation ?: "",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
                     Spacer(modifier = Modifier.padding(8.dp))
                 }
             }
