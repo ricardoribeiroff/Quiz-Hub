@@ -7,8 +7,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Home
@@ -33,12 +36,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import dev.app.quizhub.ui.theme.QuizhubTheme
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.background
 
 @Composable
 fun QuestionsScreen(
@@ -48,12 +53,14 @@ fun QuestionsScreen(
 ) {
     val questions = questionsViewModel.question.collectAsState(initial = emptyList())
     val alternatives = questionsViewModel.alternative.collectAsState(initial = emptyList())
+    val selectedAlternatives = questionsViewModel.selectedAlternatives.collectAsState(initial = emptyMap())
+    val evaluationResult = questionsViewModel.evaluationResult.collectAsState(initial = emptyMap())
+    val isEvaluated = questionsViewModel.isEvaluated.collectAsState(initial = false)
+    val questionSet = questionsViewModel.questionSet.collectAsState(initial = null)
     val coroutineScope = rememberCoroutineScope()
     val questionNumbers = remember {
         mutableStateOf(List(100) { it + 1 })
     }
-    // Mapping of question id to alternative id for selection
-    var selectedAlternatives = remember { mutableStateOf(mutableMapOf<Long, Long>()) }
 
     LaunchedEffect(Unit) {
         coroutineScope.launch {
@@ -69,16 +76,17 @@ fun QuestionsScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.background)
                         .padding(20.dp)
                 ) {
                     Text(
-                        text = "Quiz \\nHub",
+                        text = "Quiz \nHub",
                         style = MaterialTheme.typography.displayLarge,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
                         modifier = Modifier.padding(top = 140.dp),
-                        text = "Atividade 1",
+                        text = questionSet.value?.name ?: "",
                         style = MaterialTheme.typography.headlineMedium,
                         fontSize = 24.sp,
                         color = MaterialTheme.colorScheme.primary
@@ -98,23 +106,7 @@ fun QuestionsScreen(
                         FloatingActionButton(
                             containerColor = MaterialTheme.colorScheme.onPrimary,
                             onClick = {
-                                // Ensure all questions have an alternative selected
-                                if (selectedAlternatives.value.size < questions.value.size) {
-                                    Log.d("EVALUATION", "Please answer all questions before evaluation.")
-                                    return@FloatingActionButton
-                                }
-                                // Evaluate all selected alternatives
-                                selectedAlternatives.value.forEach { (questionId, alternativeId) ->
-                                    val chosenAlternative = alternatives.value.firstOrNull { it.id == alternativeId }
-                                    if (chosenAlternative != null) {
-                                        Log.d(
-                                            "EVALUATION",
-                                            "Question id $questionId: Alternative id $alternativeId isCorrect = ${chosenAlternative.isCorrect}"
-                                        )
-                                    } else {
-                                        Log.d("EVALUATION", "Question id $questionId: No alternative found")
-                                    }
-                                }
+                                questionsViewModel.evaluateAnswers()
                             },
                             elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
                         ) {
@@ -126,6 +118,8 @@ fun QuestionsScreen(
         ) { innerPadding ->
             Column(
                 modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
                     .padding(innerPadding)
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .offset(y = -20.dp)
@@ -144,34 +138,37 @@ fun QuestionsScreen(
                     alternativesForQuestion.forEachIndexed { altIndex, alternative ->
                         val marker = ('a' + altIndex)
                         val isSelected = selectedAlternativeId == alternative.id
+                        val isCorrect = isEvaluated.value && isSelected && evaluationResult.value[question.id] == true
+                        val isWrong = isEvaluated.value && isSelected && evaluationResult.value[question.id] == false
+
                         AssistChip(
                             onClick = {
-                                selectedAlternatives.value = selectedAlternatives.value.toMutableMap().apply {
-                                    if (isSelected) remove(question.id) else put(question.id, alternative.id)
-                                }
-                                Log.d(
-                                    "DEBUGLOG",
-                                    "Question id ${question.id} selected alternative id: ${alternative.id}"
-                                )
+                                questionsViewModel.toggleAlternativeSelection(question.id, alternative.id)
                             },
                             label = { Text("$marker) ${alternative.alternativeText}") },
                             border = BorderStroke(
                                 width = -1.dp,
-                                color = if (isSelected)
-                                    MaterialTheme.colorScheme.primary
-                                else
-                                    MaterialTheme.colorScheme.outline
+                                color = when {
+                                    isCorrect -> Color(0xFFB9F6CA)
+                                    isWrong -> MaterialTheme.colorScheme.error
+                                    isSelected -> MaterialTheme.colorScheme.primary
+                                    else -> MaterialTheme.colorScheme.outline
+                                }
                             ),
                             shape = MaterialTheme.shapes.extraSmall,
                             colors = AssistChipDefaults.assistChipColors(
-                                containerColor = if (isSelected)
-                                    MaterialTheme.colorScheme.primaryContainer
-                                else
-                                    AssistChipDefaults.assistChipColors().containerColor,
-                                labelColor = if (isSelected)
-                                    MaterialTheme.colorScheme.onPrimaryContainer
-                                else
-                                    AssistChipDefaults.assistChipColors().labelColor
+                                containerColor = when {
+                                    isCorrect -> Color(0xFFB9F6CA)
+                                    isWrong -> MaterialTheme.colorScheme.errorContainer
+                                    isSelected -> MaterialTheme.colorScheme.primaryContainer
+                                    else -> AssistChipDefaults.assistChipColors().containerColor
+                                },
+                                labelColor = when {
+                                    isCorrect -> MaterialTheme.colorScheme.onTertiaryContainer
+                                    isWrong -> MaterialTheme.colorScheme.onErrorContainer
+                                    isSelected -> MaterialTheme.colorScheme.onPrimaryContainer
+                                    else -> AssistChipDefaults.assistChipColors().labelColor
+                                }
                             )
                         )
                     }
