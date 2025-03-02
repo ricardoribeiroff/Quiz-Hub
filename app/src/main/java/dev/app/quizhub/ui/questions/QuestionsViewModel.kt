@@ -55,19 +55,24 @@ class QuestionsViewModel(application: Application) : AndroidViewModel(applicatio
     fun fetchQuestions(setId: String) {
         currentSetId = setId
         viewModelScope.launch {
-            _questions.value = QuestionDAO().getBySetId(setId)
-            val allQuestionSets = QuestionSetDAO().getAll()
-            _questionSet.value = allQuestionSets.find { it.id.toString() == setId }
-            
-            // Verifica se o questionário já foi finalizado
-            _questionSet.value?.let { set ->
-                if (set.isFinished) {
-                    _isReadOnly.value = true
-                    _isEvaluated.value = true
+            try {
+                _questions.value = QuestionDAO().getBySetId(setId)
+                val allQuestionSets = QuestionSetDAO().getAll()
+                _questionSet.value = allQuestionSets.find { it.id.toString() == setId }
+                
+                // Carrega o estado salvo primeiro
+                loadSavedState(setId)
+                
+                // Depois verifica se o questionário está finalizado no banco
+                _questionSet.value?.let { set ->
+                    if (set.isFinished) {
+                        _isReadOnly.value = true
+                        _isEvaluated.value = true
+                    }
                 }
+            } catch (e: Exception) {
+                Log.e("QuestionsViewModel", "Erro ao carregar questões: ${e.message}")
             }
-            
-            loadSavedState(setId)
         }
     }
 
@@ -106,12 +111,10 @@ class QuestionsViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun fetchAlternatives() {
         viewModelScope.launch {
-            _alternatives.value = AlternativeDAO().getAll()
-            
-            // Se houver alternativas finalizadas, marca como somente leitura
-            if (_alternatives.value.any { it.isFinished }) {
-                _isReadOnly.value = true
-                _isEvaluated.value = true
+            try {
+                _alternatives.value = AlternativeDAO().getAll()
+            } catch (e: Exception) {
+                Log.e("QuestionsViewModel", "Erro ao carregar alternativas: ${e.message}")
             }
         }
     }
