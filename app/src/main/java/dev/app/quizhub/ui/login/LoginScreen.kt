@@ -1,4 +1,5 @@
 import android.util.Log
+import android.widget.TextView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -45,6 +47,19 @@ fun LoginScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Image(
+                painter = painterResource(id = R.drawable.logo),
+                contentDescription = "Logo QuizHub",
+                modifier = Modifier
+                    .width(200.dp)
+                    .padding(bottom = 5.dp)
+            )
+            Text(
+                text = "Quiz Hub",
+                style = MaterialTheme.typography.headlineLarge,
+                modifier = Modifier
+                .padding(bottom = 5.dp)
+            )
             OutlinedTextField(
                 value = state.email,
                 onValueChange = { loginViewModel.onEmailChange(it) },
@@ -125,9 +140,6 @@ fun LoginScreen(
                 Text("Cadastro", fontSize = 18.sp)
             }
         }
-
     }
-
-
 }
 

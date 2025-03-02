@@ -17,7 +17,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 // Cores base do app - Esquema Pastel
-private val primaryColor = Color(0xFF5B84CC)      // Azul pastel
+private val primaryColor = Color(0xFF1490C7)      // Azul pastel
 private val secondaryColor = Color(0xFFF7CAC9)    // Rosa pastel
 private val tertiaryColor = Color(0xFF98B4D4)     // Azul pastel mais claro
 private val errorColor = Color(0xFFEF9A9A)
