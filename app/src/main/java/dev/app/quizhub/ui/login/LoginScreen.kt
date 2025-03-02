@@ -92,7 +92,6 @@ fun LoginScreen(
                     couroutineScope.launch {
                         loginViewModel.onLogin(navController)
                     }
-                    Log.d("Login Button", "LOGIN CLICADO")
                 },
                 colors = ButtonColors(
                     MaterialTheme.colorScheme.primary,

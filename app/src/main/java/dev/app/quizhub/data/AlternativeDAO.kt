@@ -2,6 +2,7 @@ package dev.app.quizhub.data
 
 import android.util.Log
 import dev.app.quizhub.model.Alternative
+import dev.app.quizhub.model.CollectionEntity
 import dev.app.quizhub.model.Section
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
@@ -10,6 +11,12 @@ import io.github.jan.supabase.postgrest.query.Columns
 class AlternativeDAO {
     val supabase = DatabaseHelper().supabase
 
+
+    suspend fun getAll(): List<Alternative> {
+        return supabase.postgrest["alternatives"]
+            .select()
+            .decodeList<Alternative>()
+    }
 
     suspend fun getByQuestionId(questionId: String): List<Alternative> {
         return supabase.postgrest["alternatives"]

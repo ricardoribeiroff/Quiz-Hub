@@ -1,5 +1,7 @@
+// File: app/src/main/java/dev/app/quizhub/ui/questions/QuestionsScreen.kt
 package dev.app.quizhub.ui.questions
 
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,8 +10,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.BottomAppBar
@@ -43,19 +46,20 @@ fun QuestionsScreen(
     setId: String,
     questionsViewModel: QuestionsViewModel = viewModel(),
 ) {
-    var isAlternativeSelected by remember { mutableStateOf(false) }
     val questions = questionsViewModel.question.collectAsState(initial = emptyList())
+    val alternatives = questionsViewModel.alternative.collectAsState(initial = emptyList())
     val coroutineScope = rememberCoroutineScope()
-    var questionNumbers = remember {
-        mutableStateOf(List(100) { it + 1 })  // Pre-generate numbers 1-100
+    val questionNumbers = remember {
+        mutableStateOf(List(100) { it + 1 })
     }
-    var selectedQuestions = remember { mutableStateOf(mutableMapOf<Long, Boolean>()) }
-
+    // Mapping of question id to alternative id for selection
+    var selectedAlternatives = remember { mutableStateOf(mutableMapOf<Long, Long>()) }
 
     LaunchedEffect(Unit) {
         coroutineScope.launch {
             questionsViewModel.fetchQuestions(setId)
-            questionsViewModel.fetchAlternatives("1")
+            questionsViewModel.fetchAlternatives()
+            Log.d("DEBUGLOG", "ALTERNATIVES: ${alternatives.value}")
         }
     }
 
@@ -68,7 +72,7 @@ fun QuestionsScreen(
                         .padding(20.dp)
                 ) {
                     Text(
-                        text = "Quiz \nHub",
+                        text = "Quiz \\nHub",
                         style = MaterialTheme.typography.displayLarge,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -86,17 +90,35 @@ fun QuestionsScreen(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                     actions = {
-                        IconButton(onClick = {navController.navigate("HomeScreen")}) {
+                        IconButton(onClick = { navController.navigate("HomeScreen") }) {
                             Icon(Icons.Filled.Home, contentDescription = "Home")
                         }
                     },
                     floatingActionButton = {
                         FloatingActionButton(
                             containerColor = MaterialTheme.colorScheme.onPrimary,
-                            onClick = { navController.navigate("CreateQuestionSetScreen") },
+                            onClick = {
+                                // Ensure all questions have an alternative selected
+                                if (selectedAlternatives.value.size < questions.value.size) {
+                                    Log.d("EVALUATION", "Please answer all questions before evaluation.")
+                                    return@FloatingActionButton
+                                }
+                                // Evaluate all selected alternatives
+                                selectedAlternatives.value.forEach { (questionId, alternativeId) ->
+                                    val chosenAlternative = alternatives.value.firstOrNull { it.id == alternativeId }
+                                    if (chosenAlternative != null) {
+                                        Log.d(
+                                            "EVALUATION",
+                                            "Question id $questionId: Alternative id $alternativeId isCorrect = ${chosenAlternative.isCorrect}"
+                                        )
+                                    } else {
+                                        Log.d("EVALUATION", "Question id $questionId: No alternative found")
+                                    }
+                                }
+                            },
                             elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
                         ) {
-                            Icon(Icons.Filled.Add, "Add Question Set")
+                            Icon(Icons.Filled.Check, "Evaluate Answers")
                         }
                     }
                 )
@@ -110,43 +132,52 @@ fun QuestionsScreen(
             ) {
                 HorizontalDivider()
                 Spacer(modifier = Modifier.padding(8.dp))
-                questions.value.forEachIndexed() { index, questions ->
-                    val isSelected = selectedQuestions.value[questions.id] ?: false
+                questions.value.forEachIndexed { index, question ->
+                    val selectedAlternativeId = selectedAlternatives.value[question.id]
                     Text(
-                        text = "${questionNumbers.value[index]} -  ${questions.questionText}",
+                        text = "${questionNumbers.value[index]} -  ${question.questionText}",
                         style = MaterialTheme.typography.bodyMedium,
                         fontSize = 18.sp,
                         color = MaterialTheme.colorScheme.primary
                     )
-                    AssistChip(
-                        onClick = {
-                            selectedQuestions.value = selectedQuestions.value.toMutableMap().apply {
-                                this[questions.id] = !isSelected }
-                        },
-                        label = { Text("a) ListView")},
-                        border = BorderStroke(
-                            width = if (isSelected) -1.dp else -1.dp,
-                            color = if (isSelected)
-                                MaterialTheme.colorScheme.primary
-                            else
-                                MaterialTheme.colorScheme.outline
-                        ),
-                        shape = MaterialTheme.shapes.extraSmall,
-                        colors = AssistChipDefaults.assistChipColors(
-                            containerColor = if (isSelected)
-                                MaterialTheme.colorScheme.primaryContainer
-                            else
-                                AssistChipDefaults.assistChipColors().containerColor,
-                            labelColor = if (isSelected)
-                                MaterialTheme.colorScheme.onPrimaryContainer
-                            else
-                                AssistChipDefaults.assistChipColors().labelColor
+                    val alternativesForQuestion = alternatives.value.filter { it.questionId == question.id }
+                    alternativesForQuestion.forEachIndexed { altIndex, alternative ->
+                        val marker = ('a' + altIndex)
+                        val isSelected = selectedAlternativeId == alternative.id
+                        AssistChip(
+                            onClick = {
+                                selectedAlternatives.value = selectedAlternatives.value.toMutableMap().apply {
+                                    if (isSelected) remove(question.id) else put(question.id, alternative.id)
+                                }
+                                Log.d(
+                                    "DEBUGLOG",
+                                    "Question id ${question.id} selected alternative id: ${alternative.id}"
+                                )
+                            },
+                            label = { Text("$marker) ${alternative.alternativeText}") },
+                            border = BorderStroke(
+                                width = -1.dp,
+                                color = if (isSelected)
+                                    MaterialTheme.colorScheme.primary
+                                else
+                                    MaterialTheme.colorScheme.outline
+                            ),
+                            shape = MaterialTheme.shapes.extraSmall,
+                            colors = AssistChipDefaults.assistChipColors(
+                                containerColor = if (isSelected)
+                                    MaterialTheme.colorScheme.primaryContainer
+                                else
+                                    AssistChipDefaults.assistChipColors().containerColor,
+                                labelColor = if (isSelected)
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                else
+                                    AssistChipDefaults.assistChipColors().labelColor
+                            )
                         )
-                    )
-                    Spacer(modifier = Modifier.padding(8.dp))
+                    }
                     HorizontalDivider()
+                    Spacer(modifier = Modifier.padding(8.dp))
                 }
-
             }
         }
     }

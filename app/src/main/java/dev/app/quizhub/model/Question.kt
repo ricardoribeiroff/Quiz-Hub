@@ -11,5 +11,4 @@ data class Question(
     @SerialName("question_text")
     val questionText: String = "",
     val explanation: String = "",
-//    val alternatives: List<Alternative> = emptyList()
 )

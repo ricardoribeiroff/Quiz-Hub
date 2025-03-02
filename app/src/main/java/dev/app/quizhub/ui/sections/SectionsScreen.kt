@@ -35,7 +35,6 @@ fun SectionsScreen(
     LaunchedEffect(Unit) {
         coroutineScope.launch {
             sectionsViewModel.fetchSections(collectionId)
-            Log.d("collectionId", "ID AQUI:${collectionId}")
         }
     }
 

@@ -1,11 +1,15 @@
 package dev.app.quizhub.model
 
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class Alternative(
     val id: Long = 0,
-    val questionId: Long,
-    val alternativeText: String,
+    @SerialName("question_id")
+    val questionId: Long = 0,
+    @SerialName("alternative_text")
+    val alternativeText: String = "",
+    @SerialName("is_correct")
     val isCorrect: Boolean = false,
-    val orderIndex: Int = 0,
-    val createdAt: String? = null,
-    val updatedAt: String? = null
 )

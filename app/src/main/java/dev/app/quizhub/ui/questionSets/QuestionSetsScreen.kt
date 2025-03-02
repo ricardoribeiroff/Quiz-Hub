@@ -35,7 +35,6 @@ fun QuestionSetsScreen(
     LaunchedEffect(Unit) {
         coroutineScope.launch {
             questionSetsViewModel.fetchSections(sectionId)
-            Log.d("sectionId", "ID AQUI:${sectionId}")
         }
     }
 

@@ -26,9 +26,9 @@ class QuestionsViewModel(application: Application) : AndroidViewModel(applicatio
             _questions.value = QuestionDAO().getBySetId(setId)
         }
     }
-    fun fetchAlternatives(questionId: String) {
+    fun fetchAlternatives() {
         viewModelScope.launch {
-            _alternatives.value = AlternativeDAO().getByQuestionId(questionId)
+            _alternatives.value = AlternativeDAO().getAll()
         }
     }
 
