@@ -15,7 +15,7 @@ class QuestionSetsViewModel(application: Application) : AndroidViewModel(applica
 
     fun fetchSections(sectionId: String) {
         viewModelScope.launch {
-            _questionSets.value = QuestionSetDAO().getBySectionId(sectionId)
+            _questionSets.value = QuestionSetDAO().getBySectionId(sectionId.toInt())
         }
     }
 }

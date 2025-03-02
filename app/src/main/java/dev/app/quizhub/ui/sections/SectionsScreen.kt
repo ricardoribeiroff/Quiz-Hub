@@ -1,6 +1,7 @@
 package dev.app.quizhub.ui.sections
 
 import android.util.Log
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -17,6 +18,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.composables.icons.lucide.Archive
+import com.composables.icons.lucide.Book
+import com.composables.icons.lucide.Laptop
+import com.composables.icons.lucide.Lucide
 import dev.app.quizhub.ui.shared.SharedViewModel
 import dev.app.quizhub.ui.theme.QuizhubTheme
 import kotlinx.coroutines.launch
@@ -28,14 +33,13 @@ fun SectionsScreen(
     sharedViewModel: SharedViewModel,
     sectionsViewModel: SectionsViewModel = viewModel()
 ) {
-    val collections = sectionsViewModel.sections.collectAsState(initial = emptyList())
+    val sections = sectionsViewModel.sections.collectAsState(initial = emptyList())
     val coroutineScope = rememberCoroutineScope()
 
 
     LaunchedEffect(Unit) {
         coroutineScope.launch {
             sectionsViewModel.fetchSections(collectionId)
-            Log.d("collectionId", "ID AQUI:${collectionId}")
         }
     }
 
@@ -55,8 +59,7 @@ fun SectionsScreen(
                     Text(
                         modifier = Modifier.padding(top = 140.dp),
                         text = "Seções",
-                        style = MaterialTheme.typography.displaySmall,
-                        fontSize = 20.sp,
+                        style = MaterialTheme.typography.headlineMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
@@ -89,20 +92,14 @@ fun SectionsScreen(
                     .offset(y = -20.dp)
             ) {
                 HorizontalDivider()
-                collections.value.forEach { sections ->
+                sections.value.forEach { sections ->
                     ListItem(
                         headlineContent = { Text(sections.name) },
                         supportingContent = { Text(sections.description) },
-                        leadingContent = {
-                            Icon(
-                                Icons.Filled.Star,
-                                contentDescription = "Section icon",
-                                modifier = Modifier.padding(top = 0.dp)
-                            )
-                        },
+                        leadingContent = { Image(Lucide.Archive, contentDescription = null) },
                         trailingContent = {  },
                         modifier = Modifier.clickable {
-                            sharedViewModel.setSection(sections.id.toString())
+                            sharedViewModel.setSectionId(sections.id.toString())
                             navController.navigate("QuestionSetsScreen")
                         }
                     )

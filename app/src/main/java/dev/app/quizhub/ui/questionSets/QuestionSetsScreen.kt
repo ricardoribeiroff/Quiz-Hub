@@ -1,6 +1,7 @@
 package dev.app.quizhub.ui.questionSets
 
 import android.util.Log
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -17,6 +18,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.composables.icons.lucide.BookOpen
+import com.composables.icons.lucide.FilePen
+import com.composables.icons.lucide.Laptop
+import com.composables.icons.lucide.Lucide
+import dev.app.quizhub.ui.shared.SharedViewModel
 import dev.app.quizhub.ui.theme.QuizhubTheme
 import kotlinx.coroutines.launch
 
@@ -24,16 +30,16 @@ import kotlinx.coroutines.launch
 fun QuestionSetsScreen(
     navController: NavController,
     sectionId: String,
+    sharedViewModel: SharedViewModel,
     questionSetsViewModel: QuestionSetsViewModel = viewModel()
 ) {
-    val sections = questionSetsViewModel.questionSet.collectAsState(initial = emptyList())
+    val questionSets = questionSetsViewModel.questionSet.collectAsState(initial = emptyList())
     val coroutineScope = rememberCoroutineScope()
 
 
     LaunchedEffect(Unit) {
         coroutineScope.launch {
             questionSetsViewModel.fetchSections(sectionId)
-            Log.d("sectionId", "ID AQUI:${sectionId}")
         }
     }
 
@@ -52,9 +58,8 @@ fun QuestionSetsScreen(
                     )
                     Text(
                         modifier = Modifier.padding(top = 140.dp),
-                        text = "Question Sets",
-                        style = MaterialTheme.typography.displaySmall,
-                        fontSize = 20.sp,
+                        text = "Set de Questões",
+                        style = MaterialTheme.typography.headlineMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
@@ -87,19 +92,16 @@ fun QuestionSetsScreen(
                     .offset(y = -20.dp)
             ) {
                 HorizontalDivider()
-                sections.value.forEach { sections ->
+                questionSets.value.forEach { questionSets ->
                     ListItem(
-                        headlineContent = { Text(sections.name) },
-                        supportingContent = { Text(sections.description) },
-                        leadingContent = {
-                            Icon(
-                                Icons.Filled.Star,
-                                contentDescription = "Question Set icon",
-                                modifier = Modifier.padding(top = 0.dp)
-                            )
-                        },
+                        headlineContent = { Text(questionSets.name) },
+                        supportingContent = { Text(questionSets.description) },
+                        leadingContent = { Image(Lucide.FilePen, contentDescription = null) },
                         trailingContent = {  },
                         modifier = Modifier.clickable {
+                            sharedViewModel.setSetId(questionSets.id.toString())
+                            navController.navigate("QuestionsScreen")
+
                         }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
