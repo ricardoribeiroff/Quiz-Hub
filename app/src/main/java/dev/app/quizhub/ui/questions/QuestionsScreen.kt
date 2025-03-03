@@ -51,6 +51,8 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import dev.app.quizhub.ui.components.TimeoutLoadingDialog
+
 @Composable
 fun QuestionsScreen(
     navController: NavController,
@@ -258,32 +260,17 @@ fun QuestionsScreen(
                     )
                 }
             }
-            if (showTimeoutDialog.value) {
-                AlertDialog(
-                    onDismissRequest = { },
-                    text = {
-                        Text(text = "Houve uma falha de conexão com o servidor.")
-                    },
-                    confirmButton = {
-                        Box(
-                            modifier = Modifier.fillMaxWidth()
-                                .width(200.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Button(
-                                onClick = {
-                                    questionsViewModel.dismissTimeoutDialog()
-                                    navController.navigate("LoginScreen") {
-                                        popUpTo(0)
-                                    }
-                                }
-                            ) {
-                                Text("Ok")
-                            }
-                        }
+
+            TimeoutLoadingDialog(
+                isLoading = isLoading.value,
+                showTimeoutDialog = showTimeoutDialog.value,
+                onDismissTimeout = { questionsViewModel.dismissTimeoutDialog() },
+                onNavigateToLogin = {
+                    navController.navigate("LoginScreen") {
+                        popUpTo(0)
                     }
-                )
-            }
+                }
+            )
         }
     }
 }

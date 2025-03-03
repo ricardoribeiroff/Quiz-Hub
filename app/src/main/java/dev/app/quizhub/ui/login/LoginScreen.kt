@@ -121,6 +121,7 @@ fun LoginScreen(
                 Text("Login", fontSize = 18.sp)
             }
             TextButton(
+                enabled = false,
                 modifier = Modifier
                     .offset(y = (-10).dp),
                 onClick = {
@@ -130,6 +131,7 @@ fun LoginScreen(
                 Text("Esqueceu a senha?")
             }
             Button(
+                enabled = false,
                 modifier = Modifier
                     .offset(y = (-20).dp)
                     .width(250.dp),
