@@ -47,6 +47,12 @@ class QuestionsViewModel(application: Application) : AndroidViewModel(applicatio
     private val _questionSet = MutableStateFlow<QuestionSet?>(null)
     val questionSet: StateFlow<QuestionSet?> = _questionSet
 
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage
+
     private var currentSetId: String? = null
 
     private val _isReadOnly = MutableStateFlow(false)
@@ -55,6 +61,7 @@ class QuestionsViewModel(application: Application) : AndroidViewModel(applicatio
     fun fetchQuestions(setId: String) {
         currentSetId = setId
         viewModelScope.launch {
+            _isLoading.value = true
             try {
                 _questions.value = QuestionDAO().getBySetId(setId)
                 val allQuestionSets = QuestionSetDAO().getAll()
@@ -68,43 +75,56 @@ class QuestionsViewModel(application: Application) : AndroidViewModel(applicatio
                     if (set.isFinished) {
                         _isReadOnly.value = true
                         _isEvaluated.value = true
+                    } else {
+                        // Se não estiver finalizado, reseta os estados visuais
+                        _isReadOnly.value = false
+                        _isEvaluated.value = false
                     }
                 }
             } catch (e: Exception) {
                 Log.e("QuestionsViewModel", "Erro ao carregar questões: ${e.message}")
+                _errorMessage.value = "Erro ao carregar questões. Verifique sua conexão e tente novamente."
+            } finally {
+                _isLoading.value = false
             }
         }
     }
 
     private fun loadSavedState(setId: String) {
-        val savedStateJson = sharedPreferences.getString("quiz_state_$setId", null)
-        if (savedStateJson != null) {
-            try {
+        try {
+            val savedStateJson = sharedPreferences.getString("quiz_state_$setId", null)
+            if (savedStateJson != null) {
                 val savedState = Json.decodeFromString<QuestionState>(savedStateJson)
                 _selectedAlternatives.value = savedState.selectedAlternatives
-                _evaluationResult.value = savedState.evaluationResults
-                _isEvaluated.value = savedState.isEvaluated
-                if (savedState.isEvaluated) {
-                    _isReadOnly.value = true
+                
+                // Só carrega os resultados da avaliação se o questionário estiver finalizado
+                if (_questionSet.value?.isFinished == true) {
+                    _evaluationResult.value = savedState.evaluationResults
+                    _isEvaluated.value = savedState.isEvaluated
+                    if (savedState.isEvaluated) {
+                        _isReadOnly.value = true
+                    }
                 }
-            } catch (e: Exception) {
-                Log.e("QuestionsViewModel", "Error loading saved state", e)
             }
+        } catch (e: Exception) {
+            Log.e("QuestionsViewModel", "Error loading saved state", e)
+            _errorMessage.value = "Erro ao carregar estado salvo."
         }
     }
 
     private fun saveState() {
         currentSetId?.let { setId ->
-            val state = QuestionState(
-                selectedAlternatives = _selectedAlternatives.value,
-                evaluationResults = _evaluationResult.value,
-                isEvaluated = _isEvaluated.value
-            )
             try {
+                val state = QuestionState(
+                    selectedAlternatives = _selectedAlternatives.value,
+                    evaluationResults = _evaluationResult.value,
+                    isEvaluated = _isEvaluated.value
+                )
                 val stateJson = Json.encodeToString(state)
                 sharedPreferences.edit().putString("quiz_state_$setId", stateJson).apply()
             } catch (e: Exception) {
                 Log.e("QuestionsViewModel", "Error saving state", e)
+                _errorMessage.value = "Erro ao salvar estado."
             }
         }
     }
@@ -112,82 +132,102 @@ class QuestionsViewModel(application: Application) : AndroidViewModel(applicatio
     fun fetchAlternatives() {
         viewModelScope.launch {
             try {
-                _alternatives.value = AlternativeDAO().getAll()
+                _alternatives.value = AlternativeDAO().getAll().sortedBy { it.id }
             } catch (e: Exception) {
                 Log.e("QuestionsViewModel", "Erro ao carregar alternativas: ${e.message}")
+                _errorMessage.value = "Erro ao carregar alternativas. Verifique sua conexão e tente novamente."
             }
         }
     }
 
     fun toggleAlternativeSelection(questionId: Long, alternativeId: Long) {
-        // Se estiver em modo somente leitura, não permite alterações
         if (_isReadOnly.value) return
 
-        val currentSelections = _selectedAlternatives.value.toMutableMap()
-        if (currentSelections[questionId] == alternativeId) {
-            currentSelections.remove(questionId)
-        } else {
-            currentSelections[questionId] = alternativeId
+        try {
+            val currentSelections = _selectedAlternatives.value.toMutableMap()
+            if (currentSelections[questionId] == alternativeId) {
+                currentSelections.remove(questionId)
+            } else {
+                currentSelections[questionId] = alternativeId
+            }
+            _selectedAlternatives.value = currentSelections
+            _isEvaluated.value = false
+            saveState()
+        } catch (e: Exception) {
+            Log.e("QuestionsViewModel", "Erro ao selecionar alternativa: ${e.message}")
+            _errorMessage.value = "Erro ao selecionar alternativa."
         }
-        _selectedAlternatives.value = currentSelections
-        _isEvaluated.value = false
-        saveState()
-        Log.d("DEBUGLOG", "Question id $questionId selected alternative id: $alternativeId")
     }
 
     suspend fun evaluateAnswers(): Boolean {
         if (_selectedAlternatives.value.size < _questions.value.size) {
-            Log.d("EVALUATION", "Please answer all questions before evaluation.")
+            _errorMessage.value = "Por favor, responda todas as questões antes de avaliar."
             return false
         }
 
-        val results = mutableMapOf<Long, Boolean>()
-        val evaluatedAlternatives = mutableListOf<Long>()
+        _isLoading.value = true
+        _errorMessage.value = null
 
-        _selectedAlternatives.value.forEach { (questionId, alternativeId) ->
-            val chosenAlternative = _alternatives.value.firstOrNull { it.id == alternativeId }
-            if (chosenAlternative != null) {
-                results[questionId] = chosenAlternative.isCorrect
-                evaluatedAlternatives.add(alternativeId)
-                Log.d(
-                    "EVALUATION",
-                    "Question id $questionId: Alternative id $alternativeId isCorrect = ${chosenAlternative.isCorrect}"
-                )
-            } else {
-                Log.d("EVALUATION", "Question id $questionId: No alternative found")
-                results[questionId] = false
-            }
-        }
-        _evaluationResult.value = results
-        _isEvaluated.value = true
-        _isReadOnly.value = true
-        saveState()
+        return try {
+            val results = mutableMapOf<Long, Boolean>()
+            val evaluatedAlternatives = mutableListOf<Long>()
 
-        try {
-            // Atualiza o status do QuestionSet
-            currentSetId?.let { setId ->
-                QuestionSetDAO().updateIsFinished(setId, true)
-            }
+            // Primeiro atualiza o banco de dados
+            try {
+                currentSetId?.let { setId ->
+                    QuestionSetDAO().updateIsFinished(setId, true)
+                    // Atualiza o QuestionSet local
+                    _questionSet.value = _questionSet.value?.copy(isFinished = true)
+                }
 
-            // Atualiza apenas as alternativas que foram efetivamente avaliadas
-            evaluatedAlternatives.forEach { alternativeId ->
-                AlternativeDAO().updateIsFinished(alternativeId, true)
+                // Avalia apenas as alternativas que foram selecionadas pelo usuário
+                _selectedAlternatives.value.forEach { (questionId, alternativeId) ->
+                    val chosenAlternative = _alternatives.value.firstOrNull { it.id == alternativeId }
+                    if (chosenAlternative != null) {
+                        results[questionId] = chosenAlternative.isCorrect
+                        evaluatedAlternatives.add(alternativeId)
+                        // Marca apenas a alternativa selecionada como finalizada
+                        AlternativeDAO().updateIsFinished(alternativeId, true)
+                    } else {
+                        results[questionId] = false
+                    }
+                }
+                
+                // Depois atualiza o estado local
+                _evaluationResult.value = results
+                _isEvaluated.value = true
+                _isReadOnly.value = true
+                saveState()
+                
+                // Recarrega as alternativas para atualizar os estados
+                fetchAlternatives()
+                true
+            } catch (e: Exception) {
+                throw e
             }
-            
-            // Recarrega as alternativas para obter os estados atualizados
-            fetchAlternatives()
-            
-            return true
         } catch (e: Exception) {
             Log.e("EVALUATION", "Erro ao atualizar status: ${e.message}")
-            return false
+            _errorMessage.value = when {
+                e.message?.contains("Unable to resolve host") == true -> 
+                    "Sem conexão com a internet. Verifique sua conexão e tente novamente."
+                else -> "Erro ao avaliar questões. Tente novamente."
+            }
+            false
+        } finally {
+            _isLoading.value = false
         }
     }
 
     fun evaluateAndNavigate(onComplete: (Boolean) -> Unit) {
         viewModelScope.launch {
-            val result = evaluateAnswers()
-            onComplete(result)
+            try {
+                val result = evaluateAnswers()
+                if (result) {
+                    onComplete(true)
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = "Erro ao processar avaliação. Tente novamente."
+            }
         }
     }
 }
