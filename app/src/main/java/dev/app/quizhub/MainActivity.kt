@@ -1,6 +1,6 @@
 package dev.app.quizhub
 
-import LoginScreen
+import dev.app.quizhub.ui.login.LoginScreen
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
