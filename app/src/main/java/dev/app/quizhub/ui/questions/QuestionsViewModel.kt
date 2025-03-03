@@ -17,6 +17,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import android.content.Context
 import kotlinx.serialization.encodeToString
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.TimeoutCancellationException
 
 @Serializable
 data class QuestionState(
@@ -52,6 +54,9 @@ class QuestionsViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage
+
+    private val _showTimeoutDialog = MutableStateFlow(false)
+    val showTimeoutDialog: StateFlow<Boolean> = _showTimeoutDialog
 
     private var currentSetId: String? = null
 
@@ -169,42 +174,47 @@ class QuestionsViewModel(application: Application) : AndroidViewModel(applicatio
         _errorMessage.value = null
 
         return try {
-            val results = mutableMapOf<Long, Boolean>()
-            val evaluatedAlternatives = mutableListOf<Long>()
+            withTimeout(10000) { // 10 segundos de timeout
+                val results = mutableMapOf<Long, Boolean>()
+                val evaluatedAlternatives = mutableListOf<Long>()
 
-            // Primeiro atualiza o banco de dados
-            try {
-                currentSetId?.let { setId ->
-                    QuestionSetDAO().updateIsFinished(setId, true)
-                    // Atualiza o QuestionSet local
-                    _questionSet.value = _questionSet.value?.copy(isFinished = true)
-                }
-
-                // Avalia apenas as alternativas que foram selecionadas pelo usuário
-                _selectedAlternatives.value.forEach { (questionId, alternativeId) ->
-                    val chosenAlternative = _alternatives.value.firstOrNull { it.id == alternativeId }
-                    if (chosenAlternative != null) {
-                        results[questionId] = chosenAlternative.isCorrect
-                        evaluatedAlternatives.add(alternativeId)
-                        // Marca apenas a alternativa selecionada como finalizada
-                        AlternativeDAO().updateIsFinished(alternativeId, true)
-                    } else {
-                        results[questionId] = false
+                try {
+                    // Primeiro atualiza o banco de dados
+                    currentSetId?.let { setId ->
+                        QuestionSetDAO().updateIsFinished(setId, true)
+                        // Atualiza o QuestionSet local
+                        _questionSet.value = _questionSet.value?.copy(isFinished = true)
                     }
+
+                    // Avalia apenas as alternativas que foram selecionadas pelo usuário
+                    _selectedAlternatives.value.forEach { (questionId, alternativeId) ->
+                        val chosenAlternative = _alternatives.value.firstOrNull { it.id == alternativeId }
+                        if (chosenAlternative != null) {
+                            results[questionId] = chosenAlternative.isCorrect
+                            evaluatedAlternatives.add(alternativeId)
+                            // Marca apenas a alternativa selecionada como finalizada
+                            AlternativeDAO().updateIsFinished(alternativeId, true)
+                        } else {
+                            results[questionId] = false
+                        }
+                    }
+                    
+                    // Depois atualiza o estado local
+                    _evaluationResult.value = results
+                    _isEvaluated.value = true
+                    _isReadOnly.value = true
+                    saveState()
+                    
+                    // Recarrega as alternativas para atualizar os estados
+                    fetchAlternatives()
+                    true
+                } catch (e: Exception) {
+                    throw e
                 }
-                
-                // Depois atualiza o estado local
-                _evaluationResult.value = results
-                _isEvaluated.value = true
-                _isReadOnly.value = true
-                saveState()
-                
-                // Recarrega as alternativas para atualizar os estados
-                fetchAlternatives()
-                true
-            } catch (e: Exception) {
-                throw e
             }
+        } catch (e: TimeoutCancellationException) {
+            _showTimeoutDialog.value = true
+            false
         } catch (e: Exception) {
             Log.e("EVALUATION", "Erro ao atualizar status: ${e.message}")
             _errorMessage.value = when {
@@ -229,5 +239,9 @@ class QuestionsViewModel(application: Application) : AndroidViewModel(applicatio
                 _errorMessage.value = "Erro ao processar avaliação. Tente novamente."
             }
         }
+    }
+
+    fun dismissTimeoutDialog() {
+        _showTimeoutDialog.value = false
     }
 }

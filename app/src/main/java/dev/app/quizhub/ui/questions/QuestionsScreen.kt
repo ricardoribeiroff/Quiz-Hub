@@ -43,13 +43,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import dev.app.quizhub.ui.theme.QuizhubTheme
-import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 @Composable
 fun QuestionsScreen(
     navController: NavController,
@@ -65,11 +66,14 @@ fun QuestionsScreen(
     val isReadOnly = questionsViewModel.isReadOnly.collectAsState(initial = false)
     val isLoading = questionsViewModel.isLoading.collectAsState(initial = false)
     val errorMessage = questionsViewModel.errorMessage.collectAsState(initial = null)
+    val showTimeoutDialog = questionsViewModel.showTimeoutDialog.collectAsState(initial = false)
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val questionNumbers = remember {
         mutableStateOf(List(100) { it + 1 })
     }
+
+
 
     LaunchedEffect(Unit) {
         try {
@@ -253,6 +257,32 @@ fun QuestionsScreen(
                         modifier = Modifier.padding(16.dp)
                     )
                 }
+            }
+            if (showTimeoutDialog.value) {
+                AlertDialog(
+                    onDismissRequest = { },
+                    text = {
+                        Text(text = "Houve uma falha de conexão com o servidor.")
+                    },
+                    confirmButton = {
+                        Box(
+                            modifier = Modifier.fillMaxWidth()
+                                .width(200.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Button(
+                                onClick = {
+                                    questionsViewModel.dismissTimeoutDialog()
+                                    navController.navigate("LoginScreen") {
+                                        popUpTo(0)
+                                    }
+                                }
+                            ) {
+                                Text("Ok")
+                            }
+                        }
+                    }
+                )
             }
         }
     }
