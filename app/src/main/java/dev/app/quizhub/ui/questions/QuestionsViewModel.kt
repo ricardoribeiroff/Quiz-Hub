@@ -16,8 +16,11 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import android.content.Context
+import io.github.jan.supabase.exceptions.HttpRequestException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withContext
 
 @Serializable
 data class QuestionState(
@@ -62,34 +65,91 @@ class QuestionsViewModel(application: Application) : AndroidViewModel(applicatio
     private val _isReadOnly = MutableStateFlow(false)
     val isReadOnly: StateFlow<Boolean> = _isReadOnly
 
+    private suspend fun <T> executeWithTimeout(
+        block: suspend () -> T
+    ): T {
+        if (_isLoading.value) {
+            throw IllegalStateException("Operação em andamento")
+        }
+
+        _isLoading.value = true
+        _showTimeoutDialog.value = false
+        _errorMessage.value = null
+
+        return try {
+            withContext(Dispatchers.IO) {
+                withTimeout(10000) {
+                    block()
+                }
+            }
+        } catch (e: TimeoutCancellationException) {
+            _showTimeoutDialog.value = true
+            Log.e("QuestionsViewModel", "Timeout na operação: ${e.message}", e)
+            throw e
+        } catch (e: HttpRequestException) {
+            Log.e("QuestionsViewModel", "Erro de rede: ${e.message}", e)
+            _errorMessage.value = "Sem conexão com a internet. Verifique sua conexão e tente novamente."
+            throw e
+        } catch (e: Exception) {
+            Log.e("QuestionsViewModel", "Erro na operação: ${e.message}", e)
+            _errorMessage.value = "Erro ao processar operação. Tente novamente."
+            throw e
+        } finally {
+            if (!_showTimeoutDialog.value) {
+                _isLoading.value = false
+            }
+        }
+    }
+
     fun fetchQuestions(setId: String) {
         currentSetId = setId
-        viewModelScope.launch {
-            _isLoading.value = true
+        viewModelScope.launch(Dispatchers.Main) {
             try {
-                _questions.value = QuestionDAO().getBySetId(setId)
-                val allQuestionSets = QuestionSetDAO().getAll()
-                _questionSet.value = allQuestionSets.find { it.id.toString() == setId }
-                
-                // Carrega o estado salvo primeiro
-                loadSavedState(setId)
-                
-                // Depois verifica se o questionário está finalizado no banco
-                _questionSet.value?.let { set ->
-                    if (set.isFinished) {
-                        _isReadOnly.value = true
-                        _isEvaluated.value = true
-                    } else {
-                        // Se não estiver finalizado, reseta os estados visuais
-                        _isReadOnly.value = false
-                        _isEvaluated.value = false
+                executeWithTimeout {
+                    val questions = QuestionDAO().getBySetId(setId)
+                    val allQuestionSets = QuestionSetDAO().getAll()
+                    val questionSet = allQuestionSets.find { it.id.toString() == setId }
+
+                    withContext(Dispatchers.Main) {
+                        // Atualiza os estados de forma segura na Main thread
+                        _questions.value = questions
+                        _questionSet.value = questionSet
+
+                        // Carrega o estado salvo primeiro
+                        loadSavedState(setId)
+
+                        // Depois verifica se o questionário está finalizado no banco
+                        questionSet?.let { set ->
+                            if (set.isFinished) {
+                                _isReadOnly.value = true
+                                _isEvaluated.value = true
+                            } else {
+                                // Se não estiver finalizado, reseta os estados visuais
+                                _isReadOnly.value = false
+                                _isEvaluated.value = false
+                            }
+                        }
                     }
                 }
+
+                // Carrega as alternativas após carregar as questões
+                fetchAlternatives()
             } catch (e: Exception) {
-                Log.e("QuestionsViewModel", "Erro ao carregar questões: ${e.message}")
-                _errorMessage.value = "Erro ao carregar questões. Verifique sua conexão e tente novamente."
+                Log.e("QuestionsViewModel", "Erro ao carregar questões: ${e.message}", e)
+                withContext(Dispatchers.Main) {
+                    _errorMessage.value = when {
+                        e.message?.contains("Unable to resolve host") == true ->
+                            "Sem conexão com a internet. Verifique sua conexão."
+                        else -> "Erro ao carregar dados. Tente novamente."
+                    }
+                }
+                throw e
             } finally {
-                _isLoading.value = false
+                withContext(Dispatchers.Main) {
+                    if (!_showTimeoutDialog.value) {
+                        _isLoading.value = false
+                    }
+                }
             }
         }
     }
@@ -100,7 +160,7 @@ class QuestionsViewModel(application: Application) : AndroidViewModel(applicatio
             if (savedStateJson != null) {
                 val savedState = Json.decodeFromString<QuestionState>(savedStateJson)
                 _selectedAlternatives.value = savedState.selectedAlternatives
-                
+
                 // Só carrega os resultados da avaliação se o questionário estiver finalizado
                 if (_questionSet.value?.isFinished == true) {
                     _evaluationResult.value = savedState.evaluationResults
@@ -138,8 +198,8 @@ class QuestionsViewModel(application: Application) : AndroidViewModel(applicatio
             try {
                 _alternatives.value = AlternativeDAO().getAll().sortedBy { it.id }
             } catch (e: Exception) {
-                Log.e("QuestionsViewModel", "Erro ao carregar alternativas: ${e.message}")
-                _errorMessage.value = "Erro ao carregar alternativas. Verifique sua conexão e tente novamente."
+                Log.e("QuestionsViewModel", "Erro ao carregar alternativas: ${e.message}", e)
+                _errorMessage.value = "Erro ao carregar alternativas. Tente novamente."
             }
         }
     }
@@ -163,84 +223,114 @@ class QuestionsViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun evaluateAndNavigate(onComplete: (Boolean) -> Unit) {
+        viewModelScope.launch(Dispatchers.Main) {
+            try {
+                withContext(Dispatchers.IO) {
+                    val result = evaluateAnswers()
+                    withContext(Dispatchers.Main) {
+                        if (result) {
+                            onComplete(true)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("QuestionsViewModel", "Erro ao avaliar: ${e.message}", e)
+                withContext(Dispatchers.Main) {
+                    _errorMessage.value = when {
+                        e.message?.contains("Unable to resolve host") == true -> 
+                            "Sem conexão com a internet. Suas respostas foram salvas localmente."
+                        else -> "Erro ao processar avaliação. Suas respostas foram salvas localmente."
+                    }
+                }
+            } finally {
+                withContext(Dispatchers.Main) {
+                    if (!_showTimeoutDialog.value) {
+                        _isLoading.value = false
+                    }
+                }
+            }
+        }
+    }
+
     suspend fun evaluateAnswers(): Boolean {
         if (_selectedAlternatives.value.size < _questions.value.size) {
-            _errorMessage.value = "Por favor, responda todas as questões antes de avaliar."
+            withContext(Dispatchers.Main) {
+                _errorMessage.value = "Por favor, responda todas as questões antes de avaliar."
+            }
             return false
         }
 
-        _isLoading.value = true
-        _errorMessage.value = null
-
         return try {
-            withTimeout(10000) { // 10 segundos de timeout
+            executeWithTimeout {
                 val results = mutableMapOf<Long, Boolean>()
                 val evaluatedAlternatives = mutableListOf<Long>()
 
-                try {
-                    // Primeiro atualiza o banco de dados
-                    currentSetId?.let { setId ->
+                // Primeiro atualiza o banco de dados
+                currentSetId?.let { setId ->
+                    try {
                         QuestionSetDAO().updateIsFinished(setId, true)
-                        // Atualiza o QuestionSet local
-                        _questionSet.value = _questionSet.value?.copy(isFinished = true)
+                        withContext(Dispatchers.Main) {
+                            // Atualiza o QuestionSet local de forma segura
+                            _questionSet.value = _questionSet.value?.copy(isFinished = true)
+                        }
+                    } catch (e: Exception) {
+                        Log.e("QuestionsViewModel", "Erro ao atualizar status no banco: ${e.message}", e)
+                        withContext(Dispatchers.Main) {
+                            _errorMessage.value = "Erro ao salvar avaliação. Suas respostas foram salvas localmente."
+                        }
+                        throw e
                     }
+                }
 
-                    // Avalia apenas as alternativas que foram selecionadas pelo usuário
-                    _selectedAlternatives.value.forEach { (questionId, alternativeId) ->
-                        val chosenAlternative = _alternatives.value.firstOrNull { it.id == alternativeId }
-                        if (chosenAlternative != null) {
-                            results[questionId] = chosenAlternative.isCorrect
-                            evaluatedAlternatives.add(alternativeId)
+                // Avalia apenas as alternativas que foram selecionadas pelo usuário
+                _selectedAlternatives.value.forEach { (questionId, alternativeId) ->
+                    val chosenAlternative = _alternatives.value.firstOrNull { it.id == alternativeId }
+                    if (chosenAlternative != null) {
+                        results[questionId] = chosenAlternative.isCorrect
+                        evaluatedAlternatives.add(alternativeId)
+                        try {
                             // Marca apenas a alternativa selecionada como finalizada
                             AlternativeDAO().updateIsFinished(alternativeId, true)
-                        } else {
-                            results[questionId] = false
+                        } catch (e: Exception) {
+                            Log.e("QuestionsViewModel", "Erro ao atualizar alternativa: ${e.message}", e)
+                            // Continua a execução mesmo se falhar ao atualizar uma alternativa
                         }
+                    } else {
+                        results[questionId] = false
                     }
-                    
-                    // Depois atualiza o estado local
+                }
+
+                withContext(Dispatchers.Main) {
+                    // Atualiza os estados locais de forma segura
                     _evaluationResult.value = results
                     _isEvaluated.value = true
                     _isReadOnly.value = true
                     saveState()
-                    
-                    // Recarrega as alternativas para atualizar os estados
-                    fetchAlternatives()
-                    true
-                } catch (e: Exception) {
-                    throw e
                 }
+
+                true
             }
         } catch (e: TimeoutCancellationException) {
-            _showTimeoutDialog.value = true
+            withContext(Dispatchers.Main) {
+                _showTimeoutDialog.value = true
+            }
             false
         } catch (e: Exception) {
-            Log.e("EVALUATION", "Erro ao atualizar status: ${e.message}")
-            _errorMessage.value = when {
-                e.message?.contains("Unable to resolve host") == true -> 
-                    "Sem conexão com a internet. Verifique sua conexão e tente novamente."
-                else -> "Erro ao avaliar questões. Tente novamente."
+            Log.e("EVALUATION", "Erro ao atualizar status: ${e.message}", e)
+            withContext(Dispatchers.Main) {
+                _errorMessage.value = when {
+                    e.message?.contains("Unable to resolve host") == true -> 
+                        "Sem conexão com a internet. Suas respostas foram salvas localmente."
+                    else -> "Erro ao processar avaliação. Suas respostas foram salvas localmente."
+                }
             }
             false
-        } finally {
-            _isLoading.value = false
-        }
-    }
-
-    fun evaluateAndNavigate(onComplete: (Boolean) -> Unit) {
-        viewModelScope.launch {
-            try {
-                val result = evaluateAnswers()
-                if (result) {
-                    onComplete(true)
-                }
-            } catch (e: Exception) {
-                _errorMessage.value = "Erro ao processar avaliação. Tente novamente."
-            }
         }
     }
 
     fun dismissTimeoutDialog() {
         _showTimeoutDialog.value = false
+        _isLoading.value = false // Garante que o loading seja fechado
     }
 }
