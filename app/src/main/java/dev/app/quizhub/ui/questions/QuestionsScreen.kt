@@ -45,6 +45,7 @@ import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import dev.app.quizhub.ui.components.TimeoutLoadingDialog
+import kotlinx.coroutines.launch
 
 @Composable
 fun QuestionsScreen(
@@ -73,17 +74,31 @@ fun QuestionsScreen(
     LaunchedEffect(Unit) {
         try {
             questionsViewModel.fetchQuestions(setId)
-            questionsViewModel.fetchAlternatives()
         } catch (e: Exception) {
+            // Log do erro para debug
+            android.util.Log.e("QuestionsScreen", "Erro ao carregar dados: ${e.message}", e)
+
+            // Mostra o erro no Snackbar
             snackbarHostState.showSnackbar(
-                "Erro ao carregar dados. Verifique sua conexão."
+                when {
+                    e.message?.contains("Unable to resolve host") == true ->
+                        "Sem conexão com a internet. Verifique sua conexão."
+                    else -> "Erro ao carregar dados. Tente novamente mais tarde."
+                }
             )
+
+            // Navega de volta para a tela anterior
+            navController.popBackStack()
         }
     }
 
     LaunchedEffect(errorMessage.value) {
-        errorMessage.value?.let {
-            snackbarHostState.showSnackbar(it)
+        errorMessage.value?.let { message ->
+            try {
+                snackbarHostState.showSnackbar(message)
+            } catch (e: Exception) {
+                android.util.Log.e("QuestionsScreen", "Erro ao mostrar snackbar: ${e.message}", e)
+            }
         }
     }
 
@@ -135,9 +150,16 @@ fun QuestionsScreen(
                                 FloatingActionButton(
                                     containerColor = MaterialTheme.colorScheme.onPrimary,
                                     onClick = {
-                                        questionsViewModel.evaluateAndNavigate { success ->
-                                            if (success) {
-                                                navController.popBackStack()
+                                        coroutineScope.launch {
+                                            try {
+                                                questionsViewModel.evaluateAndNavigate { success ->
+                                                    if (success) {
+                                                        navController.popBackStack()
+                                                    }
+                                                }
+                                            } catch (e: Exception) {
+                                                android.util.Log.e("QuestionsScreen", "Erro durante avaliação: ${e.message}", e)
+                                                // O erro será mostrado via errorMessage no ViewModel
                                             }
                                         }
                                     },
