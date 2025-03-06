@@ -11,6 +11,7 @@ import androidx.navigation.compose.rememberNavController
 import dev.app.quizhub.navigation.Screen
 import dev.app.quizhub.ui.createCollection.CreateCollectionScreen
 import dev.app.quizhub.ui.createQuestionSet.CreateQuestionSetScreen
+import dev.app.quizhub.ui.createQuestionsAI.CreateQuestionsAIScreen
 import dev.app.quizhub.ui.createSections.CreateSectionsScreen
 import dev.app.quizhub.ui.home.HomeScreen
 import dev.app.quizhub.ui.questionSets.QuestionSetsScreen
@@ -27,7 +28,7 @@ class MainActivity : ComponentActivity() {
             val navController = rememberNavController()
             NavHost(
                 navController = navController,
-                startDestination = Screen.Login.route
+                startDestination = Screen.CreateQuestionsAI.route
             ) {
                 composable(Screen.Login.route) {
                     LoginScreen(navController)
@@ -52,6 +53,9 @@ class MainActivity : ComponentActivity() {
                 }
                 composable(Screen.Questions.route) {
                     QuestionsScreen(navController, sharedViewModel.setId.value ?: "")
+                }
+                composable(Screen.CreateQuestionsAI.route) {
+                    CreateQuestionsAIScreen(navController)
                 }
             }
         }

@@ -18,9 +18,9 @@ class QuestionDAO {
 
     suspend fun getBySetId(setId: String): List<Question> {
         return supabase.postgrest["questions"]
-            .select (columns = Columns.list("id", "question_text", "explanation")){
+            .select (columns = Columns.list("id", "set_id", "question_text", "explanation")){
                 filter {
-                    eq("set_id", setId)
+                    eq("set_id", setId.toLong())
                 }
             }
             .decodeList<Question>()
